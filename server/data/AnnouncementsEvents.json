@@ -1,0 +1,24 @@
+[
+  {
+    "id": "announcement-1",
+    "title": "Sunday Morning Worship",
+    "description": "Join us every Sunday at 10:30 AM for worship at Goodwill Presbyterian Church.",
+    "date": "2026-05-24",
+    "time": "10:30",
+    "end_time": "12:00",
+    "category": "worship",
+    "status": "Active",
+    "created_date": "2026-05-01T12:00:00.000Z"
+  },
+  {
+    "id": "announcement-2",
+    "title": "Wednesday Bible Study",
+    "description": "Weekly Zoom Bible Study begins at 6:30 PM.",
+    "date": "",
+    "time": "18:30",
+    "end_time": "19:00",
+    "category": "study",
+    "status": "Active",
+    "created_date": "2026-05-02T12:00:00.000Z"
+  }
+]

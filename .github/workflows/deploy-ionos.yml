@@ -1,0 +1,36 @@
+name: Deploy to Ionos
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build site
+        run: npm run build
+
+      - name: Upload dist to Ionos
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.IONOS_FTP_SERVER }}
+          username: ${{ secrets.IONOS_FTP_USERNAME }}
+          password: ${{ secrets.IONOS_FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: ${{ secrets.IONOS_FTP_SERVER_DIR }}

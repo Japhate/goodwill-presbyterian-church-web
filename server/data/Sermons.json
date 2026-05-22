@@ -1,0 +1,26 @@
+[
+  {
+    "id": "sermon-active",
+    "title": "The Good Shepherd",
+    "speaker": "Rev. Dr. Ella F. Busby",
+    "date": "2026-05-17",
+    "scripture": "Psalm 23",
+    "series": "Sunday Worship",
+    "notes": "A message of comfort, care, and faithful community.",
+    "youtube_url": "https://www.youtube.com/watch?v=bERzxb_Sbvo",
+    "status": "Active",
+    "created_date": "2026-05-17T12:00:00.000Z"
+  },
+  {
+    "id": "sermon-archive-1",
+    "title": "Trusting God Together",
+    "speaker": "Goodwill Presbyterian Church",
+    "date": "2026-05-10",
+    "scripture": "Proverbs 3:5-6",
+    "series": "Sunday Worship",
+    "notes": "Walking in faith as a church family.",
+    "youtube_url": "https://www.youtube.com/watch?v=bERzxb_Sbvo",
+    "status": "Inactive",
+    "created_date": "2026-05-10T12:00:00.000Z"
+  }
+]

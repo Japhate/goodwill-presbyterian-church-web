@@ -1,0 +1,38 @@
+[
+  {
+    "id": "hero-1",
+    "order": 1,
+    "is_active": true,
+    "image_url": "https://media.base44.com/images/public/68754282289ae06e12e7a81d/b3e75647f_ChatGPTImageMar29202601_09_29PM.png",
+    "alt_text": "Welcome to Goodwill Presbyterian Church",
+    "link_url": "",
+    "link_label": ""
+  },
+  {
+    "id": "hero-2",
+    "order": 2,
+    "is_active": true,
+    "image_url": "https://media.base44.com/images/public/68754282289ae06e12e7a81d/19a9c2c9f_ChatGPTImageMar29202601_19_16PM.png",
+    "alt_text": "Join us every Wednesday at 6:30 PM for Zoom Bible Study",
+    "link_url": "",
+    "link_label": ""
+  },
+  {
+    "id": "hero-3",
+    "order": 3,
+    "is_active": true,
+    "image_url": "https://media.base44.com/images/public/68754282289ae06e12e7a81d/1548244e6_ChatGPTImageMar29202601_23_40PM.png",
+    "alt_text": "Celebrate the Season of Lent",
+    "link_url": "",
+    "link_label": ""
+  },
+  {
+    "id": "hero-4",
+    "order": 4,
+    "is_active": true,
+    "image_url": "https://media.base44.com/images/public/68754282289ae06e12e7a81d/3083651de_ChatGPTImageMar29202601_51_04PM.png",
+    "alt_text": "Blessed Palm Sunday - March 22, 2026",
+    "link_url": "",
+    "link_label": ""
+  }
+]

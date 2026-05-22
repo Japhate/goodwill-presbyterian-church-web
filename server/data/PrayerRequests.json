@@ -1,0 +1,10 @@
+[
+  {
+    "id": "prayer-1",
+    "name": "Church Family",
+    "request": "Prayers for our congregation, community, and neighbors.",
+    "is_public": true,
+    "status": "approved",
+    "created_date": "2026-05-01T12:00:00.000Z"
+  }
+]
