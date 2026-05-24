@@ -1,4 +1,4 @@
-const LOCAL_API = import.meta.env.VITE_LOCAL_API_URL || 'http://localhost:4000';
+const LOCAL_API = import.meta.env.VITE_LOCAL_API_URL || '';
 
 const seedData = {
   HeroSlide: [

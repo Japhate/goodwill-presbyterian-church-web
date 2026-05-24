@@ -2,12 +2,18 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import cors from 'cors';
+import { fileURLToPath } from 'url';
 
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT_DIR = path.resolve(__dirname, '..');
+const DIST_DIR = path.join(ROOT_DIR, 'dist');
+
 app.use(cors());
 app.use(express.json());
 
-const DATA_DIR = path.join(process.cwd(), 'server', 'data');
+const DATA_DIR = path.join(ROOT_DIR, 'server', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function readEntity(entityName) {
@@ -152,5 +158,17 @@ app.post('/api/send-welcome-email', async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 4000;
-app.listen(port, () => console.log(`Local API server listening on port ${port}`));
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR));
+
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API route not found' });
+    }
+
+    res.sendFile(path.join(DIST_DIR, 'index.html'));
+  });
+}
+
+const port = process.env.PORT || 3001;
+app.listen(port, () => console.log(`Node site listening on port ${port}`));
