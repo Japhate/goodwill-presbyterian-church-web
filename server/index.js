@@ -161,7 +161,7 @@ app.post('/api/send-welcome-email', async (req, res) => {
 if (fs.existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR));
 
-  app.get('*', (req, res) => {
+  app.use((req, res) => {
     if (req.path.startsWith('/api/')) {
       return res.status(404).json({ error: 'API route not found' });
     }
