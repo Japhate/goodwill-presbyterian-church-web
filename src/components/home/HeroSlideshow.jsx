@@ -6,26 +6,26 @@ import { format, parseISO, isValid } from "date-fns";
 // Fallback slides if no slides are in the database
 const FALLBACK_SLIDES = [
   {
-    image_url: "https://media.base44.com/images/public/68754282289ae06e12e7a81d/b3e75647f_ChatGPTImageMar29202601_09_29PM.png",
+    image_url: "/images/hero/welcome-church.png",
     alt_text: "Welcome to Goodwill Presbyterian Church",
     link_url: "",
     link_label: "",
   },
   {
-    image_url: "https://media.base44.com/images/public/68754282289ae06e12e7a81d/19a9c2c9f_ChatGPTImageMar29202601_19_16PM.png",
+    image_url: "/images/hero/zoom-bible-study.png",
     alt_text: "Join us every Wednesday at 6:30 PM for Zoom Bible Study",
     link_url: "",
     link_label: "",
   },
   {
-    image_url: "https://media.base44.com/images/public/68754282289ae06e12e7a81d/1548244e6_ChatGPTImageMar29202601_23_40PM.png",
-    alt_text: "Celebrate the Season of Lent",
+    image_url: "/images/hero/pentecost-sunday.png",
+    alt_text: "Pentecost Sunday",
     link_url: "",
     link_label: "",
   },
   {
-    image_url: "https://media.base44.com/images/public/68754282289ae06e12e7a81d/3083651de_ChatGPTImageMar29202601_51_04PM.png",
-    alt_text: "Blessed Palm Sunday — March 22, 2026",
+    image_url: "/images/hero/welcome-church.png",
+    alt_text: "Welcome to Goodwill Presbyterian Church",
     link_url: "",
     link_label: "",
   },
