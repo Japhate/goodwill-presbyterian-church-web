@@ -28,12 +28,12 @@ const FALLBACK_SLIDES = [
 const SLIDE_INTERVAL = 10000;
 
 const HOMEPAGE_BANNER_MESSAGES = [
-  "Our Live Service happens every Sunday at 10:30 am.",
-  "Join us every Wednesday at 6:30 pm for our weekly Bible Study on Zoom.",
+  "\u{1F64F} Our Live Service happens every Sunday at 10:30 am.",
+  "\u{1F4BB} Join us every Wednesday at 6:30 pm for our weekly Bible Study on Zoom.",
 ];
 
-const LIVE_SERVICE_BANNER_MESSAGE = "Our Live service is happening now, click the Live button to join.";
-const LIVE_BIBLE_STUDY_BANNER_MESSAGE = "Our Zoom Bible Study is happening now. Click the Zoom button to join us.";
+const LIVE_SERVICE_BANNER_MESSAGE = "\u{1F534} Our Live service is happening now, click the Live button to join.";
+const LIVE_BIBLE_STUDY_BANNER_MESSAGE = "\u{1F534} Our Zoom Bible Study is happening now. Click the Zoom button to join us.";
 
 // Bible Study: every Wednesday at 6:30 PM, ends at 7:00 PM
 const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
@@ -272,14 +272,14 @@ export default function HeroSlideshow({ liveEvents, announcements = [] }) {
             className={`absolute right-0 top-0 z-20 flex h-full w-8 items-center justify-center text-white/70 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/70 ${isLiveBanner ? 'bg-red-700' : 'bg-[#3f2a1f]'}`}
             aria-label="Close homepage banner"
           >
-            <span aria-hidden="true" className="text-sm leading-none">×</span>
+            <span aria-hidden="true" className="text-sm leading-none">&times;</span>
           </button>
         </div>
       )}
 
       {/* Slides */}
       {activeSlides.length > 0 && (
-        <div className="relative w-full h-[clamp(300px,40vw,760px)] overflow-hidden bg-black sm:h-[clamp(360px,40vw,760px)]">
+        <div className="relative aspect-[48/19] w-full overflow-hidden bg-black">
           {activeSlides.map((slide, i) => (
             <div
               key={i}
@@ -289,7 +289,7 @@ export default function HeroSlideshow({ liveEvents, announcements = [] }) {
               <img
                 src={slide.image_url}
                 alt={slide.alt_text || "Slide"}
-                className="h-full w-full object-cover block"
+                className="block h-full w-full object-contain"
                 draggable={false}
               />
               {/* Link overlay button */}
@@ -298,7 +298,7 @@ export default function HeroSlideshow({ liveEvents, announcements = [] }) {
                   href={slide.link_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-blue-600/95 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-full shadow-lg transition-all text-sm md:text-base"
+                  className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:bottom-4 sm:px-4 sm:py-2 sm:text-sm md:bottom-8 md:gap-2 md:px-6 md:py-3 md:text-base"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink className="w-4 h-4" />
