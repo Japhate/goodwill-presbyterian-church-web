@@ -23,6 +23,12 @@ const FALLBACK_SLIDES = [
     link_url: "",
     link_label: "",
   },
+  {
+    image_url: "/images/hero/juneteenth-celebration-hero.png",
+    alt_text: "Juneteenth Celebration",
+    link_url: "",
+    link_label: "",
+  },
 ];
 
 const SLIDE_INTERVAL = 10000;
@@ -309,8 +315,8 @@ export default function HeroSlideshow() {
           {/* Church name — bottom left, signature style */}
           <div className="absolute bottom-2 left-3 z-20">
             <div className="leading-tight">
-              <div className="text-amber-200" style={{ textShadow: '1px 2px 6px rgba(0,0,0,0.9)', fontFamily: "'Brush Script MT', 'Segoe Script', cursive", fontSize: '15px' }}>Goodwill</div>
-              <div className="text-white/80 text-[7px] tracking-[0.18em] uppercase" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.9)', letterSpacing: '0.22em' }}>Presbyterian Church, USA</div>
+              <div className="text-[11px] text-amber-200 sm:text-[15px]" style={{ textShadow: '1px 2px 6px rgba(0,0,0,0.9)', fontFamily: "'Brush Script MT', 'Segoe Script', cursive" }}>Goodwill</div>
+              <div className="text-[5px] uppercase tracking-[0.18em] text-white/80 sm:text-[7px]" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.9)', letterSpacing: '0.22em' }}>Presbyterian Church, USA</div>
             </div>
           </div>
 

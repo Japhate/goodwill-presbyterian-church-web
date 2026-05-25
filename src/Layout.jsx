@@ -242,7 +242,7 @@ export default function Layout({ children, currentPageName }) {
             <div className="flex flex-col">
               <span className="font-bold uppercase tracking-widest text-amber-100 text-xl" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.7)' }}>Goodwill</span>
               <span className="font-serif italic text-yellow-200 text-xs tracking-normal" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.5)' }}>
-                Presbyterian Church (USA)
+                Presbyterian Church, USA
               </span>
             </div>
           </Link>
@@ -442,7 +442,7 @@ export default function Layout({ children, currentPageName }) {
                   />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-amber-100" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.7)' }}>Goodwill Presbyterian Church</h3>
+                  <h3 className="text-lg font-bold text-amber-100" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.7)' }}>Goodwill Presbyterian Church, USA</h3>
                 </div>
               </div>
               <p className="text-sm text-yellow-100/90" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>

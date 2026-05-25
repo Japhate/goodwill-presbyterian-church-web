@@ -30,6 +30,15 @@ const seedData = {
       link_url: '',
       link_label: '',
     },
+    {
+      id: 'hero-4',
+      order: 4,
+      is_active: true,
+      image_url: '/images/hero/juneteenth-celebration-hero.png',
+      alt_text: 'Juneteenth Celebration',
+      link_url: '',
+      link_label: '',
+    },
   ],
   Sermons: [
     {
