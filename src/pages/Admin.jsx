@@ -136,6 +136,27 @@ export default function AdminPage() {
     }
   };
 
+  const handleDeleteSelectedHeroSlides = async (ids) => {
+    if (!ids.length) return false;
+
+    const slideLabel = ids.length === 1 ? 'hero slide' : 'hero slides';
+    if (!window.confirm(`Are you sure you want to delete ${ids.length} selected ${slideLabel}?`)) {
+      return false;
+    }
+
+    const results = await Promise.allSettled(ids.map((id) => HeroSlide.delete(id)));
+    await loadHeroSlides();
+
+    const failedDeletes = results.filter((result) => result.status === 'rejected');
+    if (failedDeletes.length > 0) {
+      console.error('Unable to delete some selected hero slides:', failedDeletes);
+      window.alert(`${failedDeletes.length} selected ${failedDeletes.length === 1 ? 'hero slide was' : 'hero slides were'} not deleted. Please try again.`);
+      return false;
+    }
+
+    return true;
+  };
+
   const handleDuplicate = async (item, type) => {
     if (type === 'pastEvent') type = 'announcement';
     
@@ -462,6 +483,7 @@ export default function AdminPage() {
           slides={heroSlides}
           onEdit={(item) => handleEdit(item, 'heroSlide')}
           onDelete={(id) => handleDelete(id, 'heroSlide')}
+          onDeleteSelected={handleDeleteSelectedHeroSlides}
           onAddNew={() => handleAddNew('heroSlide')}
         />;
       default:
