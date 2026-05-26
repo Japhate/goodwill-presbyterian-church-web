@@ -510,13 +510,8 @@ export default function Layout({ children, currentPageName }) {
               </a>
             </div>
 
-            {/* Admin & Social Media */}
+            {/* Social Media */}
             <div className="flex items-center space-x-3">
-              {(firebaseEnabled || currentUser?.role === 'admin') && (
-                <Link to={createPageUrl("Admin")} title="Admin sign in" className="p-2 rounded-full text-white bg-amber-600 hover:bg-amber-700 transition-all duration-300 hover:scale-110">
-                  <Settings className="w-4 h-4" />
-                </Link>
-              )}
               <a href="https://www.facebook.com/share/177iq2ZzgN/" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-facebook transition-all duration-300 hover:scale-110">
                 <Facebook className="w-4 h-4" />
               </a>
@@ -530,10 +525,20 @@ export default function Layout({ children, currentPageName }) {
         {/* Copyright */}
         <div className="bg-black/40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="text-center">
+            <div className="flex items-center justify-center gap-2 text-center">
               <p className="text-xs text-gray-400">
                 &copy; {new Date().getFullYear()} Goodwill Presbyterian Church. All rights reserved.
               </p>
+              {(firebaseEnabled || currentUser?.role === 'admin') && (
+                <Link
+                  to={createPageUrl("Admin")}
+                  title="Admin sign in"
+                  aria-label="Admin sign in"
+                  className="inline-flex h-4 w-4 items-center justify-center rounded-sm text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  <Settings className="h-3 w-3" />
+                </Link>
+              )}
             </div>
           </div>
         </div>
