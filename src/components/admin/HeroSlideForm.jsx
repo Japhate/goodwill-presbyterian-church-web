@@ -17,23 +17,49 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
     ...slide,
   });
   const [uploading, setUploading] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const [uploadError, setUploadError] = useState("");
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
     setUploading(true);
-    const { file_url } = await localApi.integrations.Core.UploadFile({ file, destination: "heroImage" });
-    handleChange("image_url", file_url);
-    setUploading(false);
+    setUploadError("");
+    try {
+      const filesToUpload = slide ? files.slice(0, 1) : files;
+      const uploaded = await Promise.all(
+        filesToUpload.map((file) => localApi.integrations.Core.UploadFile({ file, destination: "heroImage" }))
+      );
+      const imageUrls = uploaded.map(({ file_url }) => file_url);
+      setUploadedImages(slide ? [] : imageUrls);
+      handleChange("image_url", imageUrls[0] || "");
+    } catch (error) {
+      console.error("Hero image upload failed:", error);
+      setUploadError("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({ ...formData, order: Number(formData.order) });
+    const order = Number(formData.order);
+
+    if (!slide && uploadedImages.length > 1) {
+      onSubmit(uploadedImages.map((imageUrl, index) => ({
+        ...formData,
+        image_url: imageUrl,
+        order: order + index,
+      })));
+      return;
+    }
+
+    onSubmit({ ...formData, order });
   };
 
   return (
@@ -43,24 +69,40 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Image Upload or URL */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Image *</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              {slide ? "Image *" : "Images *"}
+            </label>
             <div className="flex gap-2 mb-2">
               <label className="cursor-pointer flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md text-sm transition-colors">
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                Upload Image
-                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                {slide ? "Upload Image" : "Upload Images"}
+                <input type="file" accept="image/*" multiple={!slide} className="hidden" onChange={handleFileUpload} disabled={uploading} />
               </label>
-              <span className="text-gray-400 self-center text-sm">or paste URL below</span>
+              <span className="text-gray-400 self-center text-sm">
+                {slide ? "or paste URL below" : "select one or several, or paste one URL below"}
+              </span>
             </div>
             <Input
               value={formData.image_url}
-              onChange={(e) => handleChange("image_url", e.target.value)}
+              onChange={(e) => {
+                setUploadedImages([]);
+                handleChange("image_url", e.target.value);
+              }}
               placeholder="https://..."
               required
             />
-            {formData.image_url && (
+            {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
+            {!slide && uploadedImages.length > 1 ? (
+              <>
+                <p className="text-xs text-green-700 mt-2">{uploadedImages.length} images ready. Each image will be created as its own slide.</p>
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {uploadedImages.map((imageUrl, index) => (
+                    <img key={imageUrl} src={imageUrl} alt={`Preview ${index + 1}`} className="w-full h-24 object-cover rounded-md border" />
+                  ))}
+                </div>
+              </>
+            ) : formData.image_url && (
               <img src={formData.image_url} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-md border" />
             )}
           </div>
@@ -102,7 +144,11 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
               placeholder="0"
               className="w-28"
             />
-            <p className="text-xs text-gray-500 mt-1">Lower numbers appear first.</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {uploadedImages.length > 1
+                ? `Lower numbers appear first. This batch will use orders ${Number(formData.order)} through ${Number(formData.order) + uploadedImages.length - 1}.`
+                : "Lower numbers appear first."}
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -114,8 +160,8 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button type="submit" className="bg-amber-600 hover:bg-amber-700 flex-1">
-              {slide ? "Save Changes" : "Add Slide"}
+            <Button type="submit" className="bg-amber-600 hover:bg-amber-700 flex-1" disabled={uploading}>
+              {slide ? "Save Changes" : uploadedImages.length > 1 ? `Add ${uploadedImages.length} Slides` : "Add Slide"}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel

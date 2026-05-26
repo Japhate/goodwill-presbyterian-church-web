@@ -250,6 +250,8 @@ export default function AdminPage() {
             case 'heroSlide':
                 if (isEditing) {
                     await HeroSlide.update(editingItem.id, formData);
+                } else if (Array.isArray(formData)) {
+                    await Promise.all(formData.map((slideData) => HeroSlide.create(slideData)));
                 } else {
                     await HeroSlide.create(formData);
                 }
