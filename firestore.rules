@@ -42,6 +42,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /HomeBannerMessages/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /PrayerRequests/{documentId} {
       allow read, update, delete: if isAdmin();
       allow create: if request.resource.data.keys().hasOnly([

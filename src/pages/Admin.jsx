@@ -53,8 +53,33 @@ export default function AdminPage() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginNotice, setLoginNotice] = useState('');
+  const [adminLoadError, setAdminLoadError] = useState('');
   const [signingIn, setSigningIn] = useState(false);
   const inactivityTimerRef = useRef(null);
+
+  const loadAdminData = async () => {
+    const loaders = [
+      ['announcements', loadAnnouncements],
+      ['worship events', loadWorshipEvents],
+      ['sermons', loadSermons],
+      ['bulletins', loadBulletins],
+      ['homepage banners', loadBanners],
+      ['hero slides', loadHeroSlides],
+    ];
+
+    const results = await Promise.allSettled(loaders.map(([, loader]) => loader()));
+
+    const failedSections = results
+      .map((result, index) => result.status === 'rejected' ? loaders[index][0] : null)
+      .filter(Boolean);
+
+    if (failedSections.length > 0) {
+      console.error('Unable to load admin sections:', results);
+      setAdminLoadError(`Signed in, but unable to load ${failedSections.join(', ')}. Please refresh or check Firestore rules.`);
+    } else {
+      setAdminLoadError('');
+    }
+  };
 
   const checkUserAndLoadData = async () => {
       setLoading(true);
@@ -63,21 +88,16 @@ export default function AdminPage() {
         if (user && user.role === 'admin') {
           setIsAdmin(true);
           setLoginNotice('');
-          await Promise.all([
-            loadAnnouncements(), 
-            loadWorshipEvents(),
-            loadSermons(),
-            loadBulletins(),
-            loadBanners(),
-            loadHeroSlides()
-          ]);
+          await loadAdminData();
         } else {
           setIsAdmin(false);
           setLoginNotice(consumeAutoLogoutNotice());
+          setAdminLoadError('');
         }
       } catch (error) {
         setIsAdmin(false);
         setLoginNotice(consumeAutoLogoutNotice());
+        setAdminLoadError('');
         console.error("User not authenticated or not an admin", error);
       } finally {
         setLoading(false);
@@ -105,6 +125,7 @@ export default function AdminPage() {
         setEditingItem(null);
         setFormView(null);
         setLoginNotice(AUTO_LOGOUT_MESSAGE);
+        setAdminLoadError('');
       }
     };
 
@@ -396,6 +417,7 @@ export default function AdminPage() {
     setEditingItem(null);
     setFormView(null);
     setLoginNotice('');
+    setAdminLoadError('');
   };
 
   if (loading) {
@@ -578,6 +600,11 @@ export default function AdminPage() {
             </Button>
           )}
         </div>
+        {adminLoadError && (
+          <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {adminLoadError}
+          </div>
+        )}
         
         <div className="mb-8 flex justify-center flex-wrap gap-4 border-b pb-4">
           <Button
