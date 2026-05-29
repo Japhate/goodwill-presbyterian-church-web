@@ -464,7 +464,19 @@ export default function Resources() {
   // Derived state from the main 'sermons' and 'bulletins' states
   const latestSermon = useMemo(() => selectedSermon, [selectedSermon]);
   const sermonSpeakers = useMemo(() => {
-    return [...new Set(sermons.map((sermon) => sermon.speaker).filter(Boolean))]
+    const speakersByKey = new Map();
+
+    sermons.forEach((sermon) => {
+      const speaker = sermon.speaker?.trim();
+      if (!speaker) return;
+
+      const key = speaker.toLowerCase();
+      if (!speakersByKey.has(key)) {
+        speakersByKey.set(key, speaker);
+      }
+    });
+
+    return [...speakersByKey.values()]
       .sort((a, b) => compareText(a, b, "asc"));
   }, [sermons]);
 
@@ -472,7 +484,7 @@ export default function Resources() {
     const q = sermonSearch.trim().toLowerCase();
     const speakerFiltered = selectedSpeaker === "all"
       ? sermons
-      : sermons.filter((sermon) => sermon.speaker === selectedSpeaker);
+      : sermons.filter((sermon) => sermon.speaker?.trim().toLowerCase() === selectedSpeaker.toLowerCase());
 
     const filtered = q ? speakerFiltered.filter(s =>
       s.title?.toLowerCase().includes(q) ||
@@ -522,7 +534,7 @@ export default function Resources() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 md:pt-20 pb-6">
           <div>
             <h1 className="text-xl md:text-2xl font-bold leading-tight">Church Resources</h1>
-            <p className="text-gray-300 text-sm mt-1">Live worship · Past messages · Bulletins · Faith growth</p>
+            <p className="text-gray-300 text-sm mt-1">Live worship | Past messages | Bulletins | Faith growth</p>
           </div>
         </div>
       </section>
@@ -563,7 +575,7 @@ export default function Resources() {
                   <CardHeader className="bg-red-600 text-white py-2 px-4">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                      <CardTitle className="text-base font-bold">LIVE NOW — Worship Service</CardTitle>
+                      <CardTitle className="text-base font-bold">LIVE NOW - Worship Service</CardTitle>
                       <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                     </div>
                   </CardHeader>
@@ -641,7 +653,7 @@ export default function Resources() {
                           <span className="text-xs font-semibold uppercase tracking-widest text-amber-300">Next Live Service</span>
                         </div>
                         <h2 className="text-xl font-bold">Sunday Worship</h2>
-                        <p className="text-sm text-gray-300">Every Sunday · 10:30 AM</p>
+                        <p className="text-sm text-gray-300">Every Sunday | 10:30 AM</p>
                       </div>
 
                       {/* Center: Countdown */}
@@ -874,9 +886,21 @@ export default function Resources() {
                       </div>
                       <CardContent className="p-4">
                         <p className="font-semibold text-gray-800 leading-tight mb-2" title={sermon.title}>{sermon.title}</p>
-                        {sermon.scripture && <p className="text-xs text-gray-600 mb-2 italic">{sermon.scripture}</p>}
-                        <p className="text-xs text-amber-600 font-medium">{sermon.speaker}</p>
-                        <p className="text-xs text-gray-500">{format(parseISO(sermon.date), "MMM d, yyyy")}</p>
+                        {sermon.scripture && (
+                          <p className="text-xs text-gray-600 mb-2">
+                            <span className="font-semibold text-gray-700">Scripture Reading(s):</span> {sermon.scripture}
+                          </p>
+                        )}
+                        {sermon.speaker && (
+                          <p className="text-xs text-amber-700 mb-1">
+                            <span className="font-semibold">Speaker:</span> {sermon.speaker}
+                          </p>
+                        )}
+                        {sermon.date && (
+                          <p className="text-xs text-gray-500">
+                            <span className="font-semibold">Date:</span> {format(parseISO(sermon.date), "MMMM d, yyyy")}
+                          </p>
+                        )}
                         {isPlaying && <div className="mt-3"><Button onClick={() => setPlayingSermonId(null)} variant="outline" size="sm" className="w-full text-xs">Close Video</Button></div>}
                       </CardContent>
                     </Card>
@@ -905,8 +929,16 @@ export default function Resources() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-gray-800 leading-tight truncate">{sermon.title}</p>
-                            {sermon.scripture && <p className="text-xs text-gray-500 italic">{sermon.scripture}</p>}
-                            <p className="text-xs text-amber-600 font-medium">{sermon.speaker} · {format(parseISO(sermon.date), "MMM d, yyyy")}</p>
+                            {sermon.scripture && (
+                              <p className="text-xs text-gray-500">
+                                <span className="font-semibold">Scripture Reading(s):</span> {sermon.scripture}
+                              </p>
+                            )}
+                            <p className="text-xs text-amber-700 font-medium">
+                              {sermon.speaker && <><span className="font-semibold">Speaker:</span> {sermon.speaker}</>}
+                              {sermon.speaker && sermon.date && <span> | </span>}
+                              {sermon.date && <><span className="font-semibold">Date:</span> {format(parseISO(sermon.date), "MMMM d, yyyy")}</>}
+                            </p>
                           </div>
                           {selectedSermon?.id === sermon.id && <Badge className="bg-amber-500 text-white flex-shrink-0">Now Playing</Badge>}
                         </div>
