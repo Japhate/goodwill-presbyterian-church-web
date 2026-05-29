@@ -4,6 +4,7 @@ import { WorshipEvent } from '@/entities/WorshipEvent';
 import { Sermons } from '@/entities/Sermons';
 import { Bulletins } from '@/entities/Bulletins';
 import { HomeBannerMessages } from '@/entities/HomeBannerMessages';
+import { Banner as LegacyBanner } from '@/entities/Banner';
 import { User } from '@/entities/User';
 import AnnouncementList from '@/components/admin/AnnouncementList';
 import AnnouncementForm from '@/components/admin/AnnouncementForm';
@@ -172,6 +173,18 @@ export default function AdminPage() {
     const data = await HomeBannerMessages.list('-created_date', 100);
     if (data.length > 0) {
       setBanners(data);
+      return;
+    }
+
+    const legacyBanners = await LegacyBanner.list('-created_date', 100);
+    if (legacyBanners.length > 0) {
+      const migratedBanners = await Promise.all(
+        legacyBanners.map(({ id: _id, ...banner }, index) => HomeBannerMessages.create({
+          ...banner,
+          order: banner.order ?? index + 1,
+        }))
+      );
+      setBanners(migratedBanners);
       return;
     }
 
