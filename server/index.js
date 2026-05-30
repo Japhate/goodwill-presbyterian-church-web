@@ -9,6 +9,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
+const CANONICAL_HOST = 'www.goodwillpresch1867.org';
+const LEGACY_HOSTS = new Set([
+  'goodwillpresch1867.com',
+  'www.goodwillpresch1867.com',
+]);
+
+app.use((req, res, next) => {
+  const host = req.hostname?.toLowerCase();
+
+  if (LEGACY_HOSTS.has(host)) {
+    return res.redirect(301, `https://${CANONICAL_HOST}${req.originalUrl}`);
+  }
+
+  next();
+});
 
 app.use(cors());
 app.use(express.json());
