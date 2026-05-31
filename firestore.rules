@@ -91,10 +91,11 @@ service cloud.firestore {
           && request.resource.data.email == resource.data.email
           && request.resource.data.email_key == resource.data.email_key
           && request.resource.data.unsubscribe_token == resource.data.unsubscribe_token
+          && request.resource.data.unsubscribe_token_confirm == resource.data.unsubscribe_token
           && request.resource.data.status == 'unsubscribed'
           && request.resource.data.unsubscribed_date is string
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status', 'unsubscribed_date', 'updated_date'
+            'status', 'unsubscribed_date', 'updated_date', 'unsubscribe_token_confirm'
           ])
         )
         || (
@@ -106,7 +107,7 @@ service cloud.firestore {
           && request.resource.data.unsubscribe_token.size() >= 24
           && request.resource.data.status == 'active'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'unsubscribe_token', 'status', 'created_date', 'unsubscribed_date', 'updated_date'
+            'unsubscribe_token', 'status', 'created_date', 'unsubscribed_date', 'updated_date', 'unsubscribe_token_confirm'
           ])
         );
     }

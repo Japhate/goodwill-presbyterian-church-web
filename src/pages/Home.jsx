@@ -23,6 +23,10 @@ function createUnsubscribeToken() {
   return `${Date.now()}${Math.random()}`.replace(/\D/g, "").padEnd(36, "0").slice(0, 36);
 }
 
+function isValidNewsletterEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export default function Home() {
   const [announcements, setAnnouncements] = useState([]);
   const [latestSermon, setLatestSermon] = useState(null);
@@ -385,6 +389,11 @@ export default function Home() {
     e.preventDefault();
     const email = newsletterEmail.trim().toLowerCase();
     if (!email || isNewsletterSubmitting) return;
+    if (!isValidNewsletterEmail(email)) {
+      setNewsletterStatus("error");
+      setNewsletterMessage("Please enter a valid email address.");
+      return;
+    }
 
     setIsNewsletterSubmitting(true);
     setNewsletterStatus("");
@@ -401,21 +410,28 @@ export default function Home() {
           status: "active",
         });
 
-        fetch('/api/send-welcome-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            emailKey,
-            unsubscribeToken,
-            host: window.location.host,
-            protocol: window.location.protocol.replace(':', ''),
-          }),
-        }).catch(() => {});
-
         setNewsletterStatus("success");
         setNewsletterMessage("Thank you for subscribing!");
         setNewsletterEmail("");
+        try {
+          const welcomeResponse = await fetch('/api/send-welcome-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              emailKey,
+              unsubscribeToken,
+              host: window.location.host,
+              protocol: window.location.protocol.replace(':', ''),
+            }),
+          });
+
+          if (!welcomeResponse.ok) {
+            setNewsletterMessage("Thank you for subscribing. You are on the list, but the welcome email could not be sent.");
+          }
+        } catch {
+          setNewsletterMessage("Thank you for subscribing. You are on the list, but the welcome email could not be sent.");
+        }
         setTimeout(() => setNewsletterMessage(""), 5000);
     } catch (error) {
         console.error("Newsletter subscription error:", error);
@@ -1149,19 +1165,23 @@ export default function Home() {
                     <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-2">
                         <Input 
                             type="email" 
+                            name="email"
+                            autoComplete="email"
                             placeholder="Your Email Address" 
                             value={newsletterEmail}
                             onChange={(e) => setNewsletterEmail(e.target.value)}
                             className="bg-gray-100"
                             disabled={isNewsletterSubmitting}
+                            aria-describedby={newsletterMessage ? "newsletter-status" : undefined}
                             required
                         />
-                        <Button type="submit" disabled={isNewsletterSubmitting} className="bg-amber-600 hover:bg-amber-700 text-white glow-effect disabled:cursor-not-allowed disabled:opacity-70">
+                        <Button type="submit" disabled={isNewsletterSubmitting} aria-busy={isNewsletterSubmitting} className="bg-amber-600 hover:bg-amber-700 text-white glow-effect disabled:cursor-not-allowed disabled:opacity-70">
                             <Send className="w-4 h-4 mr-2 sm:mr-0" /><span className="sm:hidden lg:inline">{isNewsletterSubmitting ? "Subscribing..." : "Subscribe"}</span>
                         </Button>
                     </form>
                     {newsletterMessage && (
                       <p
+                        id="newsletter-status"
                         className={`mt-2 text-sm ${newsletterStatus === "error" ? "text-red-700" : "text-green-700"}`}
                         role="status"
                         aria-live="polite"

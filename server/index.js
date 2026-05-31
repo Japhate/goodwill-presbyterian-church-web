@@ -168,7 +168,9 @@ async function handleUnsubscribeRequest(req, res) {
   const remaining = subs.filter((subscription) => {
     const keyMatches = emailKey && subscription.email_key === emailKey;
     const emailMatches = normalizeEmail(subscription.email) === normalizedEmail;
-    const tokenMatches = !subscription.unsubscribe_token || !token || subscription.unsubscribe_token === token;
+    const tokenMatches = subscription.unsubscribe_token
+      ? Boolean(token) && subscription.unsubscribe_token === token
+      : true;
 
     return !(tokenMatches && (keyMatches || emailMatches));
   });

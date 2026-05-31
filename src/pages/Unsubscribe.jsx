@@ -24,8 +24,15 @@ export default function Unsubscribe() {
         if (emailKey && token) {
           await NewsletterSubscriptions.update(emailKey, {
             status: 'unsubscribed',
+            unsubscribe_token_confirm: token,
             unsubscribed_date: new Date().toISOString(),
           });
+
+          fetch('/api/unsubscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, emailKey, token }),
+          }).catch(() => {});
 
           setStatus('success');
           setMessage('You have been successfully unsubscribed from the Goodwill Presbyterian Church newsletter.');
