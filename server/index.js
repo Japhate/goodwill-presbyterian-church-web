@@ -118,7 +118,7 @@ function linkifyEscapedText(escapedText, variables) {
   if (escapedUnsubscribeUrl) {
     text = text.replaceAll(
       escapedUnsubscribeUrl,
-      `<a href="${escapedUnsubscribeUrl}" style="color:#8a5a16;text-decoration:underline;">${escapedUnsubscribeUrl}</a>`
+      `<a href="${escapedUnsubscribeUrl}" style="color:#8a5a16;font-weight:bold;text-decoration:underline;">Unsubscribe</a>`
     );
   }
 
