@@ -7,6 +7,7 @@ import { HomeBannerMessages } from '@/entities/HomeBannerMessages';
 import { Banner as LegacyBanner } from '@/entities/Banner';
 import { SitePopups } from '@/entities/SitePopups';
 import { NewsletterSubscriptions } from '@/entities/NewsletterSubscriptions';
+import { NewsletterBroadcasts } from '@/entities/NewsletterBroadcasts';
 import { EmailTemplates } from '@/entities/EmailTemplates';
 import { User } from '@/entities/User';
 import AnnouncementList from '@/components/admin/AnnouncementList';
@@ -25,11 +26,14 @@ import SitePopupList from '@/components/admin/SitePopupList';
 import SitePopupForm from '@/components/admin/SitePopupForm';
 import NewsletterAdmin from '@/components/admin/NewsletterAdmin';
 import { HeroSlide } from '@/entities/HeroSlide';
-import { firebaseEnabled } from '@/lib/firebase';
+import { firebaseAuth, firebaseEnabled } from '@/lib/firebase';
+import { localApi } from '@/api/localApiClient';
+import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase';
 import { DEFAULT_HOMEPAGE_BANNERS } from '@/lib/homepageBanners';
 import { DEFAULT_EMAIL_TEMPLATES, NEWSLETTER_TEMPLATE_IDS } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
-import { Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut, BellRing, Mail } from 'lucide-react';
+import { Camera, Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -37,6 +41,22 @@ const ADMIN_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 const AUTO_LOGOUT_NOTICE_KEY = 'goodwill-admin-auto-logout';
 const AUTO_LOGOUT_MESSAGE = 'You were logged out automatically due to inactivity.';
 const ACTIVITY_EVENTS = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'];
+const ADMIN_PRIVACY_NOTICE_VERSION = '2026-05-31';
+const ADMIN_PRIVACY_NOTICE = [
+  'As a Goodwill Presbyterian Church site administrator, you are trusted with access to information that may include names, email addresses, prayer requests, newsletter subscriber records, worship resources, and internal church communications.',
+  'Use this admin panel only for legitimate church ministry and website management purposes. Do not download, copy, share, screenshot, export, or reuse personal information unless it is necessary for an approved church task.',
+  'Newsletter and broadcast tools must be used with care. Send messages only to appropriate recipients, avoid unnecessary attachments, and make sure the content reflects the church with accuracy, kindness, and respect.',
+  'Prayer requests, pastoral information, and private contact details should be treated as confidential. If something appears sensitive, pause and confirm before publishing, forwarding, or storing it elsewhere.',
+  'Keep your administrator account secure. Do not share your password, do not leave the admin panel open on a shared device, and sign out when you are finished. If you believe your account or device has been compromised, contact the church website administrator immediately.',
+  'By continuing, you acknowledge that you are responsible for protecting church data, using this access only for authorized purposes, and promptly reporting mistakes or privacy concerns.'
+];
+const KNOWN_ADMIN_PROFILES = {
+  'nebajaphate@gmail.com': {
+    first_name: 'Japhate',
+    last_name: 'Neba',
+    email: 'nebajaphate@gmail.com',
+  },
+};
 
 function getSaveErrorMessage(error) {
   if (error?.code === 'permission-denied' || String(error?.message || '').toLowerCase().includes('permission')) {
@@ -65,6 +85,72 @@ async function getApiErrorMessage(response, fallback) {
   return [body?.error, body?.detail].filter(Boolean).join(" ") || fallback;
 }
 
+function normalizeBroadcastAttachment(attachment) {
+  return {
+    filename: attachment.filename,
+    contentType: attachment.contentType || attachment.content_type || '',
+    size: attachment.size || 0,
+    file_url: attachment.file_url || attachment.fileUrl || '',
+    content: attachment.content || '',
+  };
+}
+
+function splitDisplayName(name = '') {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] || '',
+    lastName: parts.slice(1).join(' '),
+  };
+}
+
+function getKnownAdminNameFallback(email = '') {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const knownProfile = KNOWN_ADMIN_PROFILES[normalizedEmail];
+  return knownProfile
+    ? { firstName: knownProfile.first_name, lastName: knownProfile.last_name }
+    : { firstName: '', lastName: '' };
+}
+
+function deriveAdminProfile(user = {}, profile = {}) {
+  const fallbackName = splitDisplayName(user.full_name || firebaseAuth?.currentUser?.displayName || '');
+  const email = profile.email || user.email || firebaseAuth?.currentUser?.email || '';
+  const emailName = email ? email.split('@')[0].replace(/[._-]+/g, ' ') : '';
+  const emailFallback = splitDisplayName(emailName);
+  const knownAdminName = getKnownAdminNameFallback(email);
+  const firstName = profile.first_name || user.first_name || knownAdminName.firstName || fallbackName.firstName || emailFallback.firstName || 'Site';
+  const lastName = profile.last_name || user.last_name || knownAdminName.lastName || fallbackName.lastName || emailFallback.lastName || 'Admin';
+
+  return {
+    id: profile.id || user.id || firebaseAuth?.currentUser?.uid || '',
+    first_name: firstName,
+    last_name: lastName,
+    has_saved_name: Boolean(profile.first_name && profile.last_name),
+    email,
+    photo_url: profile.photo_url || user.photo_url || '',
+  };
+}
+
+function getInitials(profile = {}) {
+  return [profile.first_name, profile.last_name]
+    .filter(Boolean)
+    .map((part) => part.trim().charAt(0).toUpperCase())
+    .join('')
+    .slice(0, 2) || 'SA';
+}
+
+function AdminAvatar({ profile, size = 'md' }) {
+  const dimensions = size === 'lg' ? 'h-16 w-16 text-xl' : 'h-10 w-10 text-sm';
+  return (
+    <div className={`${dimensions} flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-amber-200 bg-amber-100 font-bold text-amber-900 shadow-sm`}>
+      {profile?.photo_url ? (
+        <img src={profile.photo_url} alt={`${profile.first_name || 'Admin'} profile`} className="h-full w-full object-cover" />
+      ) : (
+        <span>{getInitials(profile)}</span>
+      )}
+    </div>
+  );
+}
+
 function consumeAutoLogoutNotice() {
   if (typeof window === 'undefined') return '';
   if (window.localStorage.getItem(AUTO_LOGOUT_NOTICE_KEY) !== 'true') return '';
@@ -83,6 +169,7 @@ export default function AdminPage() {
   const [sitePopups, setSitePopups] = useState([]);
   const [newsletterSubscribers, setNewsletterSubscribers] = useState([]);
   const [emailTemplates, setEmailTemplates] = useState([]);
+  const [newsletterBroadcasts, setNewsletterBroadcasts] = useState([]);
   const [view, setView] = useState('announcements'); // 'announcements', 'worshipEvents', 'pastEvents', 'sermons', 'bulletins', 'banners', 'hiddenAnnouncements', 'heroSlides', 'sitePopups', 'newsletter'
   const [formView, setFormView] = useState(null); // 'announcement', 'worshipEvent', 'sermon', 'bulletin', 'banner', 'heroSlide', 'sitePopup', or null
   const [editingItem, setEditingItem] = useState(null);
@@ -94,7 +181,17 @@ export default function AdminPage() {
   const [loginNotice, setLoginNotice] = useState('');
   const [adminLoadError, setAdminLoadError] = useState('');
   const [signingIn, setSigningIn] = useState(false);
+  const [currentAdmin, setCurrentAdmin] = useState(null);
+  const [adminProfiles, setAdminProfiles] = useState([]);
+  const [showPrivacyNotice, setShowPrivacyNotice] = useState(false);
+  const [privacyNoticeRead, setPrivacyNoticeRead] = useState(false);
+  const [showAdminNamePrompt, setShowAdminNamePrompt] = useState(false);
+  const [adminFirstNameInput, setAdminFirstNameInput] = useState('');
+  const [adminLastNameInput, setAdminLastNameInput] = useState('');
+  const [savingAdminName, setSavingAdminName] = useState(false);
+  const [uploadingAdminPhoto, setUploadingAdminPhoto] = useState(false);
   const inactivityTimerRef = useRef(null);
+  const privacyNoticeRef = useRef(null);
 
   const loadAdminData = async () => {
     const loaders = [
@@ -122,6 +219,63 @@ export default function AdminPage() {
     }
   };
 
+  const loadAdminProfiles = async (user) => {
+    if (!firebaseEnabled || !firestore) {
+      const profile = deriveAdminProfile(user);
+      setCurrentAdmin(profile);
+      setAdminFirstNameInput(profile.first_name || '');
+      setAdminLastNameInput(profile.last_name || '');
+      setShowAdminNamePrompt(!profile.has_saved_name);
+      setAdminProfiles([profile]);
+      setShowPrivacyNotice(Boolean(profile.has_saved_name));
+      return;
+    }
+
+    try {
+      const snapshot = await getDocs(collection(firestore, 'admins'));
+      const profiles = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+      const ownProfile = profiles.find((profile) => profile.id === user.id);
+      const knownProfile = KNOWN_ADMIN_PROFILES[String(user.email || '').trim().toLowerCase()];
+      const profileNeedsKnownUpdate = knownProfile && (
+        ownProfile?.first_name !== knownProfile.first_name
+        || ownProfile?.last_name !== knownProfile.last_name
+        || ownProfile?.email !== knownProfile.email
+      );
+
+      if (profileNeedsKnownUpdate) {
+        await updateDoc(doc(firestore, 'admins', user.id), {
+          ...knownProfile,
+          photo_url: ownProfile?.photo_url || '',
+          updated_date: new Date().toISOString(),
+        });
+      }
+
+      const normalizedCurrentAdmin = deriveAdminProfile(user, profileNeedsKnownUpdate
+        ? { ...ownProfile, ...knownProfile, id: user.id }
+        : ownProfile);
+      setCurrentAdmin(normalizedCurrentAdmin);
+      setAdminFirstNameInput(normalizedCurrentAdmin.first_name || '');
+      setAdminLastNameInput(normalizedCurrentAdmin.last_name || '');
+      setShowAdminNamePrompt(!normalizedCurrentAdmin.has_saved_name);
+      setAdminProfiles([
+        normalizedCurrentAdmin,
+        ...profiles
+          .filter((profile) => profile.id !== normalizedCurrentAdmin.id)
+          .map((profile) => deriveAdminProfile({}, profile)),
+      ]);
+      setShowPrivacyNotice(Boolean(normalizedCurrentAdmin.has_saved_name));
+    } catch (error) {
+      console.error('Unable to load admin profiles:', error);
+      const profile = deriveAdminProfile(user);
+      setCurrentAdmin(profile);
+      setAdminFirstNameInput(profile.first_name || '');
+      setAdminLastNameInput(profile.last_name || '');
+      setShowAdminNamePrompt(!profile.has_saved_name);
+      setAdminProfiles([profile]);
+      setShowPrivacyNotice(Boolean(profile.has_saved_name));
+    }
+  };
+
   const checkUserAndLoadData = async () => {
       setLoading(true);
       try {
@@ -129,14 +283,22 @@ export default function AdminPage() {
         if (user && user.role === 'admin') {
           setIsAdmin(true);
           setLoginNotice('');
+          await loadAdminProfiles(user);
+          setPrivacyNoticeRead(false);
           await loadAdminData();
         } else {
           setIsAdmin(false);
+          setCurrentAdmin(null);
+          setAdminProfiles([]);
+          setShowAdminNamePrompt(false);
           setLoginNotice(consumeAutoLogoutNotice());
           setAdminLoadError('');
         }
       } catch (error) {
         setIsAdmin(false);
+        setCurrentAdmin(null);
+        setAdminProfiles([]);
+        setShowAdminNamePrompt(false);
         setLoginNotice(consumeAutoLogoutNotice());
         setAdminLoadError('');
         console.error("User not authenticated or not an admin", error);
@@ -163,6 +325,10 @@ export default function AdminPage() {
         console.error('Unable to auto logout inactive admin session:', error);
       } finally {
         setIsAdmin(false);
+        setCurrentAdmin(null);
+        setAdminProfiles([]);
+        setShowPrivacyNotice(false);
+        setShowAdminNamePrompt(false);
         setEditingItem(null);
         setFormView(null);
         setLoginNotice(AUTO_LOGOUT_MESSAGE);
@@ -187,6 +353,53 @@ export default function AdminPage() {
       });
     };
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (!showPrivacyNotice) return undefined;
+    const timer = window.setTimeout(() => {
+      const node = privacyNoticeRef.current;
+      if (node && node.scrollHeight <= node.clientHeight + 8) {
+        setPrivacyNoticeRead(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [showPrivacyNotice]);
+
+  useEffect(() => {
+    if (!showPrivacyNotice && !showAdminNamePrompt) return undefined;
+    const originalOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBodyPosition = document.body.style.position;
+    const originalBodyWidth = document.body.style.width;
+    const scrollY = window.scrollY;
+    const preventScroll = (event) => {
+      const noticeScrollArea = privacyNoticeRef.current;
+      if (event.type === 'keydown' && !['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' '].includes(event.key)) return;
+      if (noticeScrollArea && noticeScrollArea.contains(event.target)) return;
+      event.preventDefault();
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    window.addEventListener('wheel', preventScroll, { passive: false });
+    window.addEventListener('touchmove', preventScroll, { passive: false });
+    window.addEventListener('keydown', preventScroll, { passive: false });
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.position = originalBodyPosition;
+      document.body.style.top = '';
+      document.body.style.width = originalBodyWidth;
+      window.removeEventListener('wheel', preventScroll);
+      window.removeEventListener('touchmove', preventScroll);
+      window.removeEventListener('keydown', preventScroll);
+      window.scrollTo(0, scrollY);
+    };
+  }, [showPrivacyNotice, showAdminNamePrompt]);
 
   const loadAnnouncements = async () => {
     // Fetch with a default sort, will be re-sorted in the component
@@ -269,12 +482,14 @@ export default function AdminPage() {
   };
 
   const loadNewsletterAdmin = async () => {
-    const [subscribers, templates] = await Promise.all([
+    const [subscribers, templates, broadcasts] = await Promise.all([
       NewsletterSubscriptions.list('-created_date', 500),
       EmailTemplates.list('name', 20).catch(() => []),
+      NewsletterBroadcasts.list('-updated_date', 100).catch(() => []),
     ]);
 
     setNewsletterSubscribers(subscribers);
+    setNewsletterBroadcasts(broadcasts);
 
     const seededTemplates = [...templates];
     for (const defaultTemplate of DEFAULT_EMAIL_TEMPLATES) {
@@ -388,6 +603,136 @@ export default function AdminPage() {
     } catch (error) {
       window.alert(`Unable to send the test email: ${error.message}`);
     }
+  };
+
+  const handleSendNewsletterBroadcast = async ({ subject, message, attachments, recipientIds }) => {
+    const selectedRecipientIds = new Set(recipientIds || []);
+    const activeRecipients = newsletterSubscribers
+      .filter((subscriber) => (subscriber.status || 'active') === 'active')
+      .filter((subscriber) => selectedRecipientIds.has(String(subscriber.id || subscriber.email_key || subscriber.email || '')))
+      .map((subscriber) => ({
+        email: subscriber.email,
+        firstName: subscriber.first_name || '',
+        lastName: subscriber.last_name || '',
+        emailKey: subscriber.email_key || subscriber.id || encodeURIComponent(subscriber.email || ''),
+        unsubscribeToken: subscriber.unsubscribe_token || '',
+      }))
+      .filter((subscriber) => subscriber.email);
+
+    if (activeRecipients.length === 0) {
+      throw new Error('There are no active newsletter subscribers.');
+    }
+
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) {
+      throw new Error('Please sign in again before sending a broadcast.');
+    }
+
+    const response = await fetch('/api/send-newsletter-broadcast', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        subject,
+        message,
+        attachments,
+        recipients: activeRecipients,
+        host: window.location.host,
+        protocol: window.location.protocol.replace(':', ''),
+      }),
+    });
+
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error([body?.error, body?.detail].filter(Boolean).join(' ') || 'Unable to send the broadcast.');
+    }
+
+    return body;
+  };
+
+  const uploadBroadcastAttachments = async (attachments = []) => {
+    return Promise.all(attachments.map(async (attachment) => {
+      if (attachment.file_url || attachment.fileUrl) {
+        return normalizeBroadcastAttachment(attachment);
+      }
+
+      if (attachment.file) {
+        const uploaded = await localApi.integrations.Core.UploadFile({
+          file: attachment.file,
+          destination: 'newsletterAttachment',
+        });
+
+        return {
+          filename: attachment.filename,
+          contentType: attachment.contentType || attachment.file.type || '',
+          size: attachment.size || attachment.file.size || 0,
+          file_url: uploaded.file_url,
+        };
+      }
+
+      return normalizeBroadcastAttachment(attachment);
+    }));
+  };
+
+  const prepareBroadcastRecord = async ({ subject, message, attachments, recipientIds, status, scheduledAt }) => {
+    const selectedRecipientIds = recipientIds || [];
+    const storedAttachments = await uploadBroadcastAttachments(attachments || []);
+
+    return {
+      subject: subject.trim(),
+      message: message.trim(),
+      status,
+      scheduled_at: scheduledAt || '',
+      recipient_ids: selectedRecipientIds,
+      recipient_count: selectedRecipientIds.length,
+      attachments: storedAttachments.map(({ content: _content, file: _file, ...attachment }) => attachment),
+      updated_date: new Date().toISOString(),
+    };
+  };
+
+  const handleSaveNewsletterBroadcastDraft = async (data) => {
+    const record = await prepareBroadcastRecord({ ...data, status: 'draft', scheduledAt: '' });
+    if (data.id) {
+      await NewsletterBroadcasts.update(data.id, record);
+    } else {
+      await NewsletterBroadcasts.create({ ...record, created_date: new Date().toISOString() });
+    }
+    await loadNewsletterAdmin();
+  };
+
+  const handleScheduleNewsletterBroadcast = async (data) => {
+    const record = await prepareBroadcastRecord({ ...data, status: 'scheduled' });
+    if (!record.scheduled_at) throw new Error('Choose a schedule date and time.');
+    if (data.id) {
+      await NewsletterBroadcasts.update(data.id, record);
+    } else {
+      await NewsletterBroadcasts.create({ ...record, created_date: new Date().toISOString() });
+    }
+    await loadNewsletterAdmin();
+  };
+
+  const handleMarkNewsletterBroadcastSent = async (id, result, sentData = {}) => {
+    const sentFields = {
+      status: result.failed ? 'partial' : 'sent',
+      sent_at: new Date().toISOString(),
+      sent_count: result.sent || 0,
+      failed_count: result.failed || 0,
+      updated_date: new Date().toISOString(),
+    };
+
+    if (id) {
+      await NewsletterBroadcasts.update(id, sentFields);
+    } else {
+      const record = await prepareBroadcastRecord({ ...sentData, status: sentFields.status, scheduledAt: '' });
+      await NewsletterBroadcasts.create({
+        ...record,
+        ...sentFields,
+        created_date: new Date().toISOString(),
+      });
+    }
+    await loadNewsletterAdmin();
   };
 
   const handleAddNew = (type) => {
@@ -630,10 +975,105 @@ export default function AdminPage() {
     window.clearTimeout(inactivityTimerRef.current);
     await User.logout();
     setIsAdmin(false);
+    setCurrentAdmin(null);
+    setAdminProfiles([]);
+    setShowPrivacyNotice(false);
+    setShowAdminNamePrompt(false);
     setEditingItem(null);
     setFormView(null);
     setLoginNotice('');
     setAdminLoadError('');
+  };
+
+  const handlePrivacyNoticeScroll = () => {
+    const node = privacyNoticeRef.current;
+    if (!node) return;
+    const reachedEnd = node.scrollTop + node.clientHeight >= node.scrollHeight - 8;
+    if (reachedEnd) setPrivacyNoticeRead(true);
+  };
+
+  const handleAcknowledgePrivacyNotice = async () => {
+    setShowPrivacyNotice(false);
+    setPrivacyNoticeRead(false);
+  };
+
+  const handleSaveAdminName = async (event) => {
+    event.preventDefault();
+    const firstName = adminFirstNameInput.trim().replace(/\s+/g, ' ');
+    const lastName = adminLastNameInput.trim().replace(/\s+/g, ' ');
+    if (!firstName || !lastName || !currentAdmin?.id) return;
+
+    setSavingAdminName(true);
+    try {
+      if (firebaseEnabled && firestore) {
+        await updateDoc(doc(firestore, 'admins', currentAdmin.id), {
+          first_name: firstName,
+          last_name: lastName,
+          email: currentAdmin.email,
+          photo_url: currentAdmin.photo_url || '',
+          updated_date: new Date().toISOString(),
+        });
+      }
+
+      const updatedProfile = {
+        ...currentAdmin,
+        first_name: firstName,
+        last_name: lastName,
+        has_saved_name: true,
+      };
+      setCurrentAdmin(updatedProfile);
+      setAdminProfiles((profiles) => profiles.map((profile) => (
+        profile.id === updatedProfile.id ? updatedProfile : profile
+      )));
+      setShowAdminNamePrompt(false);
+      setPrivacyNoticeRead(false);
+      setShowPrivacyNotice(true);
+    } catch (error) {
+      console.error('Unable to save admin name:', error);
+      window.alert(getSaveErrorMessage(error));
+    } finally {
+      setSavingAdminName(false);
+    }
+  };
+
+  const handleAdminPhotoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !currentAdmin?.id) return;
+    if (!file.type.startsWith('image/')) {
+      window.alert('Please choose an image file.');
+      return;
+    }
+
+    setUploadingAdminPhoto(true);
+    try {
+      const uploaded = await localApi.integrations.Core.UploadFile({
+        file,
+        destination: 'adminProfilePhoto',
+      });
+      const photoUrl = uploaded.file_url;
+
+      if (firebaseEnabled && firestore) {
+        await updateDoc(doc(firestore, 'admins', currentAdmin.id), {
+          first_name: currentAdmin.first_name,
+          last_name: currentAdmin.last_name,
+          email: currentAdmin.email,
+          photo_url: photoUrl,
+          updated_date: new Date().toISOString(),
+        });
+      }
+
+      const updatedProfile = { ...currentAdmin, photo_url: photoUrl };
+      setCurrentAdmin(updatedProfile);
+      setAdminProfiles((profiles) => profiles.map((profile) => (
+        profile.id === updatedProfile.id ? updatedProfile : profile
+      )));
+    } catch (error) {
+      console.error('Unable to upload admin profile photo:', error);
+      window.alert(getSaveErrorMessage(error));
+    } finally {
+      setUploadingAdminPhoto(false);
+    }
   };
 
   if (loading) {
@@ -650,7 +1090,10 @@ export default function AdminPage() {
         <div className="min-h-screen bg-gray-100 flex items-center justify-center pt-20 px-4">
           <form onSubmit={handleSignIn} className="w-full max-w-md space-y-5 bg-white p-8 rounded-lg shadow-md">
             <h1 className="text-2xl font-bold text-gray-900">Admin Sign In</h1>
-            <p className="text-sm text-gray-600">Sign in with your approved Firebase administrator account.</p>
+            <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm">
+              <p className="font-bold text-red-700">This area is for site administrators only.</p>
+              <p className="mt-1 font-semibold text-red-700">Please contact the main web developer for admin sign-in details.</p>
+            </div>
             {loginNotice && (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 {loginNotice}
@@ -711,6 +1154,8 @@ export default function AdminPage() {
     // Both are undated, sort by creation date (newest first)
     return new Date(b.created_date) - new Date(a.created_date);
   });
+
+  const otherAdminProfiles = adminProfiles.filter((profile) => profile.id !== currentAdmin?.id);
 
 
   const renderContent = () => {
@@ -814,10 +1259,15 @@ export default function AdminPage() {
         return <NewsletterAdmin
           subscribers={newsletterSubscribers}
           templates={emailTemplates}
+          broadcasts={newsletterBroadcasts}
           onAddSubscriber={handleAddNewsletterSubscriber}
           onDeleteSubscriber={handleDeleteNewsletterSubscriber}
           onSaveTemplate={handleSaveEmailTemplate}
           onSendTestEmail={handleSendNewsletterTestEmail}
+          onSendBroadcast={handleSendNewsletterBroadcast}
+          onSaveBroadcastDraft={handleSaveNewsletterBroadcastDraft}
+          onScheduleBroadcast={handleScheduleNewsletterBroadcast}
+          onMarkBroadcastSent={handleMarkNewsletterBroadcastSent}
         />;
       default:
         return null;
@@ -825,15 +1275,130 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 pt-28 pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-center justify-center gap-4">
-          <h1 className="text-4xl font-bold text-gray-900 text-center">Admin Panel</h1>
-          {firebaseEnabled && (
-            <Button variant="outline" onClick={handleSignOut} className="gap-2">
-              <LogOut className="w-4 h-4" /> Sign Out
+    <div className="min-h-screen bg-gray-100 pt-20 pb-12">
+      {showAdminNamePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
+          <form onSubmit={handleSaveAdminName} className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl">
+            <div className="mb-5">
+              <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Admin Profile</p>
+              <h2 className="mt-1 text-2xl font-bold text-gray-900">Confirm Your Name</h2>
+              <p className="mt-2 text-sm text-gray-600">
+                This is a one-time setup. Your first name will be shown at the top of the admin panel when you sign in.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="admin_first_name" className="mb-1 block text-sm font-semibold text-gray-700">First Name</label>
+                <Input
+                  id="admin_first_name"
+                  value={adminFirstNameInput}
+                  onChange={(event) => setAdminFirstNameInput(event.target.value)}
+                  autoComplete="given-name"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="admin_last_name" className="mb-1 block text-sm font-semibold text-gray-700">Last Name</label>
+                <Input
+                  id="admin_last_name"
+                  value={adminLastNameInput}
+                  onChange={(event) => setAdminLastNameInput(event.target.value)}
+                  autoComplete="family-name"
+                  required
+                />
+              </div>
+            </div>
+            <Button type="submit" className="mt-6 w-full bg-amber-600 hover:bg-amber-700" disabled={savingAdminName}>
+              {savingAdminName && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save and Continue
             </Button>
-          )}
+          </form>
+        </div>
+      )}
+      {showPrivacyNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 px-4 py-8 backdrop-blur-xl" role="dialog" aria-modal="true">
+          <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+            <div className="border-b bg-[#4b342a] px-6 py-5 text-white">
+              <p className="text-xs font-bold uppercase tracking-wide text-amber-200">Admin Privacy Notice</p>
+              <h2 className="mt-1 text-2xl font-bold">Protecting Church Information</h2>
+            </div>
+            <div
+              ref={privacyNoticeRef}
+              onScroll={handlePrivacyNoticeScroll}
+              className="max-h-[52vh] space-y-4 overflow-y-auto overscroll-contain px-6 py-5 text-sm leading-6 text-gray-700"
+            >
+              {ADMIN_PRIVACY_NOTICE.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-950">
+                <p className="font-semibold">Acknowledgement</p>
+                <p className="mt-1">
+                  Version {ADMIN_PRIVACY_NOTICE_VERSION}. Scroll to the end of this notice before continuing to the admin panel.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t px-6 py-4">
+              <p className="text-xs text-gray-500">
+                {privacyNoticeRead ? 'Thank you. You may continue.' : 'Please scroll to the end to continue.'}
+              </p>
+              <Button onClick={handleAcknowledgePrivacyNotice} disabled={!privacyNoticeRead} className="bg-amber-600 hover:bg-amber-700">
+                I Understand and Agree
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 rounded-lg bg-white p-5 shadow-md">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <AdminAvatar profile={currentAdmin} size="lg" />
+                <label className="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-amber-600 text-white shadow hover:bg-amber-700" title="Upload admin profile picture">
+                  {uploadingAdminPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAdminPhotoUpload} disabled={uploadingAdminPhoto} />
+                </label>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-amber-700">
+                  <ShieldCheck className="h-4 w-4" />
+                  You are a site administrator
+                </div>
+                <h1 className="mt-1 text-3xl font-bold text-gray-900">Admin Panel</h1>
+                <p className="mt-1 text-sm text-gray-600">
+                  You are signed in as <span className="font-semibold text-gray-900">{currentAdmin?.first_name}</span>
+                  {currentAdmin?.email ? <span> · {currentAdmin.email}</span> : null}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-start gap-3 lg:items-end">
+              <div className="flex items-center gap-2">
+                {otherAdminProfiles.length > 0 ? (
+                  <>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Other admins</span>
+                    <div className="flex -space-x-2">
+                      {otherAdminProfiles.slice(0, 6).map((profile) => (
+                        <div key={profile.id} title={`${profile.first_name || 'Admin'} ${profile.last_name || ''}`.trim()}>
+                          <AdminAvatar profile={profile} />
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                    <UserRound className="h-4 w-4" />
+                    No other admins shown
+                  </div>
+                )}
+              </div>
+              {firebaseEnabled && (
+                <Button variant="outline" onClick={handleSignOut} className="gap-2">
+                  <LogOut className="w-4 h-4" /> Sign Out
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
         {adminLoadError && (
           <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">

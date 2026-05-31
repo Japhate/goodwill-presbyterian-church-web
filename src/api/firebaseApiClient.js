@@ -193,11 +193,15 @@ async function firebaseUser() {
 
   const adminRecord = await getDoc(doc(firestore, "admins", user.uid));
   if (!adminRecord.exists()) throw new Error("This account is not an administrator.");
+  const adminData = adminRecord.data() || {};
 
   return {
     id: user.uid,
-    email: user.email,
-    full_name: user.displayName || user.email,
+    email: adminData.email || user.email,
+    first_name: adminData.first_name || "",
+    last_name: adminData.last_name || "",
+    photo_url: adminData.photo_url || "",
+    full_name: [adminData.first_name, adminData.last_name].filter(Boolean).join(" ") || user.displayName || user.email,
     role: "admin",
   };
 }
@@ -207,6 +211,8 @@ const UPLOAD_FOLDERS = {
   bulletinPdf: "bulletins-pdfs",
   bulletinThumbnail: "bulletin-thumbnails",
   announcementImage: "announcement-images",
+  newsletterAttachment: "newsletter-attachments",
+  adminProfilePhoto: "admin-profile-images",
 };
 
 function uploadPath(file, destination) {

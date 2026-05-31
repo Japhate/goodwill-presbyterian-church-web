@@ -38,5 +38,20 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
       allow delete: if isAdmin();
     }
+
+    match /newsletter-attachments/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.size < 8 * 1024 * 1024;
+      allow delete: if isAdmin();
+    }
+
+    match /admin-profile-images/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isAdmin();
+    }
   }
 }

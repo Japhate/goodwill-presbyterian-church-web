@@ -36,7 +36,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
 
 const DATA_DIR = path.join(ROOT_DIR, 'server', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -58,6 +58,10 @@ function writeEntity(entityName, data) {
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
+}
+
+function normalizePersonName(name) {
+  return String(name || '').trim().replace(/\s+/g, ' ');
 }
 
 function escapeHtml(value) {
@@ -88,6 +92,57 @@ function getServerFirestore() {
 
   const app = getApps().find((firebaseApp) => firebaseApp.name === 'server') || initializeApp(config, 'server');
   return getFirestore(app);
+}
+
+function decodeBase64UrlJson(value) {
+  const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), '=');
+  return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
+}
+
+async function assertAdminRequest(req) {
+  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) {
+    const error = new Error('Admin authorization is required.');
+    error.status = 401;
+    throw error;
+  }
+
+  const config = getFirebaseServerConfig();
+  if (!config?.projectId) {
+    const error = new Error('Firebase project configuration is missing on the server.');
+    error.status = 500;
+    throw error;
+  }
+
+  let payload;
+  try {
+    payload = decodeBase64UrlJson(token.split('.')[1]);
+  } catch {
+    const error = new Error('Invalid admin authorization token.');
+    error.status = 401;
+    throw error;
+  }
+
+  const uid = payload?.sub || payload?.user_id;
+  if (!uid || payload?.aud !== config.projectId) {
+    const error = new Error('Invalid admin authorization token.');
+    error.status = 401;
+    throw error;
+  }
+
+  const adminUrl = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/admins/${encodeURIComponent(uid)}`;
+  const response = await fetch(adminUrl, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const error = new Error('This account is not authorized to send newsletter broadcasts.');
+    error.status = response.status === 404 ? 403 : response.status;
+    throw error;
+  }
+
+  return { uid, email: payload.email || '' };
 }
 
 async function readEmailTemplate(templateId) {
@@ -197,7 +252,51 @@ async function buildNewsletterEmail({ templateId, email, firstName = '', lastNam
   };
 }
 
-async function sendResendEmail({ from, to, subject, html, text }) {
+function renderBroadcastHtml({ subject, message, recipient, unsubscribeUrl }) {
+  const variables = {
+    email: recipient.email,
+    firstName: recipient.firstName,
+    lastName: recipient.lastName,
+    unsubscribeUrl,
+    supportPhone: '',
+    supportEmail: '',
+  };
+  const heading = renderNewsletterTemplateText(subject, variables);
+  const bodyHtml = renderEmailTextBlock(message, variables);
+  const footerHtml = renderEmailTextBlock(
+    `This message was sent to [subscriber email] because you subscribed to updates from Goodwill Presbyterian Church.\n\nIf you no longer wish to receive updates, unsubscribe here:\n[unsubscribe link]`,
+    variables
+  );
+  const text = [
+    renderNewsletterTemplateText(message, variables),
+    renderNewsletterTemplateText(`If you no longer wish to receive updates, unsubscribe here:\n[unsubscribe link]`, variables),
+  ].filter(Boolean).join('\n\n');
+
+  return {
+    subject: heading,
+    html: `
+      <div style="margin:0;padding:0;background:#f8f3ea;font-family:Arial,Helvetica,sans-serif;color:#2f241c;">
+        <div style="max-width:680px;margin:0 auto;padding:32px 18px;">
+          <div style="background:#ffffff;border:1px solid #eadcc7;border-radius:12px;overflow:hidden;">
+            <div style="background:#4b342a;color:#ffffff;padding:24px 28px;">
+              <p style="margin:0 0 8px;color:#f4d78d;font-size:12px;font-weight:bold;letter-spacing:0.08em;text-transform:uppercase;">Goodwill Presbyterian Church</p>
+              <h1 style="margin:0;font-size:24px;line-height:1.25;">${escapeHtml(heading)}</h1>
+            </div>
+            <div style="padding:28px;">
+              ${bodyHtml}
+            </div>
+            <div style="border-top:1px solid #eadcc7;background:#fbf7f0;padding:18px 28px;color:#6f6258;font-size:12px;line-height:1.5;">
+              ${footerHtml}
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+    text,
+  };
+}
+
+async function sendResendEmail({ from, to, subject, html, text, attachments = [] }) {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     return {
@@ -210,7 +309,14 @@ async function sendResendEmail({ from, to, subject, html, text }) {
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from, to, subject, html, text }),
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      html,
+      text,
+      ...(attachments.length > 0 ? { attachments } : {}),
+    }),
   });
   const body = await response.text();
 
@@ -464,6 +570,117 @@ app.post('/api/send-duplicate-subscription-email', async (req, res) => {
     console.error('Send duplicate subscription error', e?.message || e);
     res.status(500).json({ error: e?.message || 'Error' });
   }
+});
+
+app.post('/api/send-newsletter-broadcast', async (req, res) => {
+  try {
+    await assertAdminRequest(req);
+  } catch (error) {
+    return res.status(error.status || 401).json({ error: error.message });
+  }
+
+  const { subject, message, recipients = [], attachments = [], host, protocol } = req.body || {};
+  const normalizedSubject = String(subject || '').trim();
+  const normalizedMessage = String(message || '').trim();
+  const activeRecipients = recipients
+    .map((recipient) => ({
+      email: normalizeEmail(recipient.email),
+      firstName: normalizePersonName(recipient.firstName || recipient.first_name),
+      lastName: normalizePersonName(recipient.lastName || recipient.last_name),
+      emailKey: recipient.emailKey || recipient.email_key,
+      unsubscribeToken: recipient.unsubscribeToken || recipient.unsubscribe_token,
+    }))
+    .filter((recipient) => recipient.email);
+  const preparedAttachments = (await Promise.all(attachments.map(async (attachment) => {
+    const filename = String(attachment.filename || '').trim();
+    const contentType = String(attachment.contentType || attachment.content_type || '').trim() || undefined;
+    const inlineContent = String(attachment.content || '').trim();
+    const fileUrl = String(attachment.file_url || attachment.fileUrl || '').trim();
+
+    if (filename && inlineContent) {
+      return { filename, content_type: contentType, content: inlineContent };
+    }
+
+    if (filename && fileUrl) {
+      const fileResponse = await fetch(fileUrl);
+      if (!fileResponse.ok) return null;
+      const fileBuffer = Buffer.from(await fileResponse.arrayBuffer());
+      return {
+        filename,
+        content_type: contentType || fileResponse.headers.get('content-type') || undefined,
+        content: fileBuffer.toString('base64'),
+      };
+    }
+
+    return null;
+  }))).filter(Boolean);
+
+  if (!normalizedSubject) return res.status(400).json({ error: 'Subject is required.' });
+  if (!normalizedMessage) return res.status(400).json({ error: 'Message is required.' });
+  if (activeRecipients.length === 0) return res.status(400).json({ error: 'At least one active subscriber is required.' });
+  if (activeRecipients.length > 500) return res.status(400).json({ error: 'Please send to 500 or fewer recipients at a time.' });
+  if (preparedAttachments.length > 5) return res.status(400).json({ error: 'Please attach no more than 5 files.' });
+
+  const totalAttachmentBytes = preparedAttachments.reduce((sum, attachment) => {
+    return sum + Math.ceil((attachment.content.length * 3) / 4);
+  }, 0);
+
+  if (totalAttachmentBytes > 8 * 1024 * 1024) {
+    return res.status(400).json({ error: 'Attachments must be 8 MB or less combined.' });
+  }
+
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
+  const siteHost = host || 'www.goodwillpres.org';
+  const siteProtocol = protocol || 'https';
+  const results = [];
+
+  for (const recipient of activeRecipients) {
+    const unsubscribeParams = new URLSearchParams({
+      email: recipient.email,
+      key: recipient.emailKey || encodeURIComponent(recipient.email),
+    });
+
+    if (recipient.unsubscribeToken) {
+      unsubscribeParams.set('token', recipient.unsubscribeToken);
+    }
+
+    const unsubscribeUrl = `${siteProtocol}://${siteHost}/Unsubscribe?${unsubscribeParams.toString()}`;
+    const emailContent = renderBroadcastHtml({
+      subject: normalizedSubject,
+      message: normalizedMessage,
+      recipient,
+      unsubscribeUrl,
+    });
+
+    const response = await sendResendEmail({
+      from: fromEmail,
+      to: recipient.email,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text,
+      attachments: preparedAttachments,
+    });
+
+    if (!response.ok) {
+      results.push({
+        email: recipient.email,
+        success: false,
+        detail: response.body.slice(0, 300),
+      });
+    } else {
+      let id = '';
+      try {
+        id = JSON.parse(response.body || '{}').id || '';
+      } catch {
+        id = '';
+      }
+      results.push({ email: recipient.email, success: true, id });
+    }
+  }
+
+  const sent = results.filter((result) => result.success).length;
+  const failed = results.length - sent;
+  res.json({ success: failed === 0, sent, failed, results });
 });
 
 const useLocalViteServer = process.env.LOCAL_VITE_DEV === 'true';

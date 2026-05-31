@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, PlusCircle, Save, Search, Trash2, Users } from "lucide-react";
+import { Mail, Paperclip, PlusCircle, Save, Search, Send, Trash2, Users, X } from "lucide-react";
 import { DEFAULT_EMAIL_TEMPLATES, mergeEmailTemplate } from "@/lib/newsletterTemplates";
 
 function formatDate(value) {
@@ -111,13 +111,65 @@ function TemplateEditor({ template, onSave, onSendTestEmail, testEmail }) {
   );
 }
 
-export default function NewsletterAdmin({ subscribers, templates, onAddSubscriber, onDeleteSubscriber, onSaveTemplate, onSendTestEmail }) {
+function readAttachmentFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      resolve({
+        filename: file.name,
+        contentType: file.type || "application/octet-stream",
+        size: file.size,
+        file,
+        content: result.includes(",") ? result.split(",").pop() : result,
+      });
+    };
+    reader.onerror = () => reject(reader.error || new Error("Unable to read attachment."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function getSubscriberKey(subscriber) {
+  return String(subscriber?.id || subscriber?.email_key || subscriber?.email || "");
+}
+
+function getBroadcastStatusClass(status) {
+  if (status === "sent") return "bg-green-600";
+  if (status === "scheduled") return "bg-blue-600";
+  if (status === "partial") return "bg-orange-600";
+  return "bg-gray-600";
+}
+
+export default function NewsletterAdmin({
+  subscribers,
+  templates,
+  broadcasts = [],
+  onAddSubscriber,
+  onDeleteSubscriber,
+  onSaveTemplate,
+  onSendTestEmail,
+  onSendBroadcast,
+  onSaveBroadcastDraft,
+  onScheduleBroadcast,
+  onMarkBroadcastSent,
+}) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [search, setSearch] = useState("");
   const [testEmail, setTestEmail] = useState("");
   const [adding, setAdding] = useState(false);
+  const [broadcastSubject, setBroadcastSubject] = useState("");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastAttachments, setBroadcastAttachments] = useState([]);
+  const [broadcastStatus, setBroadcastStatus] = useState("");
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState([]);
+  const [editingBroadcastId, setEditingBroadcastId] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [savingBroadcast, setSavingBroadcast] = useState(false);
+  const [broadcastFilter, setBroadcastFilter] = useState("all");
+  const processingScheduledIds = useRef(new Set());
 
   const normalizedTemplates = useMemo(() => {
     return DEFAULT_EMAIL_TEMPLATES.map((defaultTemplate) => {
@@ -143,6 +195,61 @@ export default function NewsletterAdmin({ subscribers, templates, onAddSubscribe
 
   const activeCount = subscribers.filter((subscriber) => subscriber.status === "active").length;
   const unsubscribedCount = subscribers.filter((subscriber) => subscriber.status === "unsubscribed").length;
+  const totalAttachmentSize = broadcastAttachments.reduce((sum, attachment) => sum + attachment.size, 0);
+  const activeSubscribers = useMemo(() => {
+    return subscribers
+      .filter((subscriber) => (subscriber.status || "active") === "active")
+      .sort((a, b) => String(a.email || "").localeCompare(String(b.email || "")));
+  }, [subscribers]);
+  const activeRecipientIds = useMemo(() => activeSubscribers.map(getSubscriberKey).filter(Boolean), [activeSubscribers]);
+  const selectedActiveRecipientIds = selectedRecipientIds.filter((id) => activeRecipientIds.includes(id));
+  const selectedRecipientCount = selectedActiveRecipientIds.length;
+  const allActiveSelected = activeRecipientIds.length > 0 && selectedRecipientCount === activeRecipientIds.length;
+  const visibleBroadcasts = useMemo(() => {
+    const sortedBroadcasts = [...broadcasts].sort((a, b) => String(b.updated_date || b.created_date || "").localeCompare(String(a.updated_date || a.created_date || "")));
+    if (broadcastFilter === "all") return sortedBroadcasts;
+    return sortedBroadcasts.filter((broadcast) => (broadcast.status || "draft") === broadcastFilter);
+  }, [broadcastFilter, broadcasts]);
+
+  useEffect(() => {
+    setSelectedRecipientIds((currentIds) => {
+      if (currentIds.length === 0) return activeRecipientIds;
+      return currentIds.filter((id) => activeRecipientIds.includes(id));
+    });
+  }, [activeRecipientIds]);
+
+  useEffect(() => {
+    const processDueBroadcasts = async () => {
+      const now = new Date();
+      const dueBroadcasts = broadcasts.filter((broadcast) => {
+        if ((broadcast.status || "draft") !== "scheduled" || !broadcast.scheduled_at) return false;
+        if (processingScheduledIds.current.has(broadcast.id)) return false;
+        const scheduledDate = new Date(broadcast.scheduled_at);
+        return !Number.isNaN(scheduledDate.getTime()) && scheduledDate <= now;
+      });
+
+      for (const broadcast of dueBroadcasts) {
+        processingScheduledIds.current.add(broadcast.id);
+        try {
+          const result = await onSendBroadcast({
+            subject: broadcast.subject || "",
+            message: broadcast.message || "",
+            attachments: broadcast.attachments || [],
+            recipientIds: broadcast.recipient_ids || [],
+          });
+          await onMarkBroadcastSent(broadcast.id, result, broadcast);
+        } catch (error) {
+          setBroadcastStatus(`Scheduled broadcast "${broadcast.subject || "Untitled broadcast"}" was not sent: ${error.message}`);
+        } finally {
+          processingScheduledIds.current.delete(broadcast.id);
+        }
+      }
+    };
+
+    processDueBroadcasts();
+    const interval = window.setInterval(processDueBroadcasts, 60000);
+    return () => window.clearInterval(interval);
+  }, [broadcasts, onMarkBroadcastSent, onSendBroadcast]);
 
   const handleAdd = async (event) => {
     event.preventDefault();
@@ -166,8 +273,378 @@ export default function NewsletterAdmin({ subscribers, templates, onAddSubscribe
     }
   };
 
+  const handleAttachmentChange = async (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (files.length === 0) return;
+
+    const existingSize = broadcastAttachments.reduce((sum, attachment) => sum + attachment.size, 0);
+    const newSize = files.reduce((sum, file) => sum + file.size, 0);
+    if (broadcastAttachments.length + files.length > 5) {
+      window.alert("Please attach no more than 5 files.");
+      return;
+    }
+    if (existingSize + newSize > 8 * 1024 * 1024) {
+      window.alert("Attachments must be 8 MB or less combined.");
+      return;
+    }
+
+    const preparedFiles = await Promise.all(files.map(readAttachmentFile));
+    setBroadcastAttachments((prev) => [...prev, ...preparedFiles]);
+  };
+
+  const handleRemoveAttachment = (indexToRemove) => {
+    setBroadcastAttachments((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleToggleAllRecipients = (checked) => {
+    setSelectedRecipientIds(checked ? activeRecipientIds : []);
+  };
+
+  const handleToggleRecipient = (subscriberId, checked) => {
+    setSelectedRecipientIds((prev) => {
+      if (checked) return Array.from(new Set([...prev, subscriberId]));
+      return prev.filter((id) => id !== subscriberId);
+    });
+  };
+
+  const resetBroadcastComposer = () => {
+    setEditingBroadcastId("");
+    setBroadcastSubject("");
+    setBroadcastMessage("");
+    setBroadcastAttachments([]);
+    setScheduledAt("");
+    setSelectedRecipientIds(activeRecipientIds);
+  };
+
+  const handleLoadBroadcast = (broadcast) => {
+    setEditingBroadcastId(broadcast.id || "");
+    setBroadcastSubject(broadcast.subject || "");
+    setBroadcastMessage(broadcast.message || "");
+    setBroadcastAttachments((broadcast.attachments || []).map((attachment) => ({
+      filename: attachment.filename,
+      contentType: attachment.contentType || attachment.content_type || "",
+      size: attachment.size || 0,
+      file_url: attachment.file_url || "",
+    })));
+    setScheduledAt(broadcast.scheduled_at || "");
+    const storedRecipients = broadcast.recipient_ids || [];
+    setSelectedRecipientIds(storedRecipients.length > 0 ? storedRecipients.filter((id) => activeRecipientIds.includes(id)) : activeRecipientIds);
+    setBroadcastStatus(`Loaded "${broadcast.subject || "Untitled broadcast"}" for editing.`);
+  };
+
+  const getBroadcastPayload = () => ({
+    id: editingBroadcastId,
+    subject: broadcastSubject.trim(),
+    message: broadcastMessage.trim(),
+    attachments: broadcastAttachments,
+    recipientIds: selectedActiveRecipientIds,
+    scheduledAt,
+  });
+
+  const handleSaveDraft = async () => {
+    const payload = getBroadcastPayload();
+    if (!payload.subject && !payload.message) {
+      setBroadcastStatus("Add a subject or message before saving a draft.");
+      return;
+    }
+    setSavingBroadcast(true);
+    setBroadcastStatus("");
+    try {
+      await onSaveBroadcastDraft(payload);
+      setBroadcastStatus("Draft saved.");
+    } catch (error) {
+      setBroadcastStatus(`Draft was not saved: ${error.message}`);
+    } finally {
+      setSavingBroadcast(false);
+    }
+  };
+
+  const handleSchedule = async () => {
+    const payload = getBroadcastPayload();
+    if (!payload.subject || !payload.message || selectedRecipientCount === 0) return;
+    if (!scheduledAt) {
+      setBroadcastStatus("Choose a schedule date and time.");
+      return;
+    }
+    setSavingBroadcast(true);
+    setBroadcastStatus("");
+    try {
+      await onScheduleBroadcast(payload);
+      setBroadcastStatus("Broadcast scheduled.");
+    } catch (error) {
+      setBroadcastStatus(`Broadcast was not scheduled: ${error.message}`);
+    } finally {
+      setSavingBroadcast(false);
+    }
+  };
+
+  const handleBroadcastSubmit = async (event) => {
+    event.preventDefault();
+    const subject = broadcastSubject.trim();
+    const message = broadcastMessage.trim();
+    if (!subject || !message || selectedRecipientCount === 0) return;
+
+    if (!window.confirm(`Send this broadcast to ${selectedRecipientCount} selected subscriber${selectedRecipientCount === 1 ? "" : "s"}?`)) return;
+
+    setSendingBroadcast(true);
+    setBroadcastStatus("");
+    try {
+      const result = await onSendBroadcast({
+        subject,
+        message,
+        attachments: broadcastAttachments,
+        recipientIds: selectedActiveRecipientIds,
+      });
+      await onMarkBroadcastSent(editingBroadcastId, result, {
+        subject,
+        message,
+        attachments: broadcastAttachments,
+        recipientIds: selectedActiveRecipientIds,
+      });
+      setBroadcastStatus(`Broadcast sent to ${result.sent} subscriber${result.sent === 1 ? "" : "s"}${result.failed ? `; ${result.failed} failed.` : "."}`);
+      if (!result.failed) {
+        resetBroadcastComposer();
+      }
+    } catch (error) {
+      setBroadcastStatus(`Broadcast was not sent: ${error.message}`);
+    } finally {
+      setSendingBroadcast(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
+      <div className="rounded-lg bg-white p-8 shadow-md">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
+              <Send className="h-6 w-6 text-amber-600" />
+              Broadcast Newsletter Email
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">Compose, save, schedule, and send messages to newsletter subscribers.</p>
+          </div>
+          <Badge className="bg-amber-600">{activeCount} active recipients</Badge>
+        </div>
+
+        <form onSubmit={handleBroadcastSubmit} className="space-y-4">
+          {editingBroadcastId && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-sm font-semibold text-amber-900">Editing a saved broadcast.</p>
+              <Button type="button" variant="outline" size="sm" onClick={resetBroadcastComposer} disabled={sendingBroadcast || savingBroadcast}>
+                Start New
+              </Button>
+            </div>
+          )}
+          <div>
+            <label className="mb-1 block text-sm font-semibold text-gray-700">Subject</label>
+            <Input
+              value={broadcastSubject}
+              onChange={(event) => setBroadcastSubject(event.target.value)}
+              placeholder="Email subject"
+              disabled={sendingBroadcast}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-semibold text-gray-700">Schedule Date and Time</label>
+            <Input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(event) => setScheduledAt(event.target.value)}
+              disabled={sendingBroadcast || savingBroadcast}
+            />
+            <p className="mt-1 text-xs text-gray-500">Save as scheduled when this message should be sent later.</p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-semibold text-gray-700">Message</label>
+            <Textarea
+              value={broadcastMessage}
+              onChange={(event) => setBroadcastMessage(event.target.value)}
+              placeholder="Write the full message for subscribers..."
+              rows={10}
+              disabled={sendingBroadcast}
+              required
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Available placeholders: [subscriber name], [first name], [last name], [subscriber email], [unsubscribe link]
+            </p>
+          </div>
+
+          <div className="rounded-md border bg-white p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Recipients</p>
+                <p className="text-xs text-gray-600">
+                  {selectedRecipientCount} of {activeCount} active subscriber{activeCount === 1 ? "" : "s"} selected
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm font-semibold text-gray-800">
+                <input
+                  type="checkbox"
+                  checked={allActiveSelected}
+                  onChange={(event) => handleToggleAllRecipients(event.target.checked)}
+                  disabled={sendingBroadcast || activeRecipientIds.length === 0}
+                  className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-600"
+                />
+                Select all active subscribers
+              </label>
+            </div>
+
+            <div className="max-h-56 overflow-y-auto rounded-md border">
+              {activeSubscribers.length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-gray-500">No active newsletter subscribers.</p>
+              ) : (
+                activeSubscribers.map((subscriber) => {
+                  const subscriberId = getSubscriberKey(subscriber);
+                  const subscriberName = [subscriber.first_name, subscriber.last_name].filter(Boolean).join(" ") || "Name not provided";
+                  return (
+                    <label key={subscriberId} className="flex cursor-pointer items-center gap-3 border-b px-4 py-3 text-sm last:border-b-0 hover:bg-amber-50">
+                      <input
+                        type="checkbox"
+                        checked={selectedActiveRecipientIds.includes(subscriberId)}
+                        onChange={(event) => handleToggleRecipient(subscriberId, event.target.checked)}
+                        disabled={sendingBroadcast}
+                        className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-600"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold text-gray-900">{subscriberName}</span>
+                        <span className="block truncate text-xs text-gray-600">{subscriber.email}</span>
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-md border border-dashed border-amber-300 bg-amber-50/50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Attachments</p>
+                <p className="text-xs text-gray-600">Optional. Up to 5 files, 8 MB combined.</p>
+              </div>
+              <label className="inline-flex cursor-pointer items-center rounded-md border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-800 shadow-sm hover:bg-amber-100">
+                <Paperclip className="mr-2 h-4 w-4" />
+                Add Files
+                <input type="file" multiple className="hidden" onChange={handleAttachmentChange} disabled={sendingBroadcast} />
+              </label>
+            </div>
+
+            {broadcastAttachments.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {broadcastAttachments.map((attachment, index) => (
+                  <div key={`${attachment.filename}-${index}`} className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm">
+                    <span className="truncate font-medium text-gray-800">{attachment.filename}</span>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>{(attachment.size / 1024).toFixed(1)} KB</span>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveAttachment(index)} disabled={sendingBroadcast} title="Remove attachment">
+                        <X className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <p className="text-xs text-gray-600">Total: {(totalAttachmentSize / 1024).toFixed(1)} KB</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={sendingBroadcast || selectedRecipientCount === 0}>
+              <Send className="mr-2 h-4 w-4" />
+              {sendingBroadcast ? "Sending..." : `Send to ${selectedRecipientCount}`}
+            </Button>
+            <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={savingBroadcast || sendingBroadcast}>
+              <Save className="mr-2 h-4 w-4" />
+              {savingBroadcast ? "Saving..." : "Save Draft"}
+            </Button>
+            <Button type="button" variant="outline" onClick={handleSchedule} disabled={savingBroadcast || sendingBroadcast || selectedRecipientCount === 0}>
+              {savingBroadcast ? "Scheduling..." : "Schedule"}
+            </Button>
+            {broadcastStatus && (
+              <p className={`text-sm font-semibold ${broadcastStatus.includes("not sent") || broadcastStatus.includes("failed") ? "text-red-700" : "text-green-700"}`}>
+                {broadcastStatus}
+              </p>
+            )}
+          </div>
+        </form>
+      </div>
+
+      <div className="rounded-lg bg-white p-8 shadow-md">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
+              <Mail className="h-6 w-6 text-amber-600" />
+              Broadcast Drafts and History
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">Review sent messages, continue drafts, or reuse a previous broadcast.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["all", "draft", "scheduled", "sent", "partial"].map((status) => (
+              <Button
+                key={status}
+                type="button"
+                variant={broadcastFilter === status ? "default" : "outline"}
+                size="sm"
+                className={broadcastFilter === status ? "bg-amber-600 hover:bg-amber-700" : ""}
+                onClick={() => setBroadcastFilter(status)}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50 text-xs uppercase text-gray-600">
+              <tr>
+                <th className="px-4 py-3">Subject</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Recipients</th>
+                <th className="px-4 py-3">When</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleBroadcasts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">No broadcast messages yet.</td>
+                </tr>
+              ) : visibleBroadcasts.map((broadcast) => {
+                const status = broadcast.status || "draft";
+                const when = status === "sent" || status === "partial"
+                  ? formatDate(broadcast.sent_at || broadcast.updated_date)
+                  : status === "scheduled"
+                    ? formatDate(broadcast.scheduled_at)
+                    : formatDate(broadcast.updated_date || broadcast.created_date);
+                return (
+                  <tr key={broadcast.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-4">
+                      <p className="font-semibold text-gray-900">{broadcast.subject || "Untitled broadcast"}</p>
+                      <p className="max-w-md truncate text-xs text-gray-600">{broadcast.message}</p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <Badge className={getBroadcastStatusClass(status)}>{status}</Badge>
+                    </td>
+                    <td className="px-4 py-4 text-gray-700">
+                      {broadcast.recipient_count || broadcast.recipient_ids?.length || broadcast.sent_count || 0}
+                    </td>
+                    <td className="px-4 py-4 text-xs text-gray-600">{when}</td>
+                    <td className="px-4 py-4 text-right">
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleLoadBroadcast(broadcast)} disabled={sendingBroadcast || savingBroadcast}>
+                        Load/Edit
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className="rounded-lg bg-white p-8 shadow-md">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>

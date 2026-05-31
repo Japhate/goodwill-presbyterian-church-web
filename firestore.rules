@@ -8,8 +8,34 @@ service cloud.firestore {
     }
 
     match /admins/{userId} {
-      allow get: if request.auth != null && request.auth.uid == userId;
-      allow list, write: if false;
+      allow get: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'first_name', 'last_name', 'email', 'photo_url', 'updated_date'
+        ])
+        && (
+          !('first_name' in request.resource.data)
+          || request.resource.data.first_name is string
+          && request.resource.data.first_name.size() <= 80
+        )
+        && (
+          !('last_name' in request.resource.data)
+          || request.resource.data.last_name is string
+          && request.resource.data.last_name.size() <= 80
+        )
+        && (
+          !('email' in request.resource.data)
+          || request.resource.data.email is string
+          && request.resource.data.email.size() <= 320
+        )
+        && (
+          !('photo_url' in request.resource.data)
+          || request.resource.data.photo_url is string
+          && request.resource.data.photo_url.size() <= 2000
+        );
+      allow create, delete: if false;
     }
 
     match /HeroSlide/{documentId} {
@@ -55,6 +81,10 @@ service cloud.firestore {
     match /EmailTemplates/{documentId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /NewsletterBroadcasts/{documentId} {
+      allow read, write: if isAdmin();
     }
 
     match /PrayerRequests/{documentId} {
