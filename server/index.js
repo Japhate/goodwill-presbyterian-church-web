@@ -195,6 +195,30 @@ async function buildNewsletterEmail({ templateId, email, unsubscribeUrl = '' }) 
   };
 }
 
+async function sendResendEmail({ from, to, subject, html, text }) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    return {
+      ok: false,
+      status: 500,
+      body: 'RESEND_API_KEY is not configured on the server.',
+    };
+  }
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to, subject, html, text }),
+  });
+  const body = await response.text();
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    body,
+  };
+}
+
 // Simple filter: exact match on keys in filter object
 function applyFilter(items, filter = {}) {
   const keys = Object.keys(filter || {});
@@ -355,8 +379,6 @@ app.post('/api/functions/unsubscribeNewsletter', handleUnsubscribeRequest);
 app.post('/api/send-welcome-email', async (req, res) => {
   const { email, emailKey, unsubscribeToken, host, protocol } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return res.status(500).json({ error: 'RESEND_API_KEY not configured' });
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
 
   const normalizedEmail = normalizeEmail(email);
@@ -379,23 +401,21 @@ app.post('/api/send-welcome-email', async (req, res) => {
       email: normalizedEmail,
       unsubscribeUrl,
     });
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: normalizedEmail,
-        subject: emailContent.subject,
-        html: emailContent.html,
-        text: emailContent.text,
-      }),
+    const response = await sendResendEmail({
+      from: fromEmail,
+      to: normalizedEmail,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text,
     });
     if (!response.ok) {
-      const err = await response.text();
-      console.error('Resend error', err);
-      return res.status(500).json({ error: 'Failed to send email' });
+      console.error('Resend welcome email error', response.body);
+      return res.status(502).json({
+        error: 'Welcome email was not sent.',
+        detail: response.body.slice(0, 500),
+      });
     }
-    const data = await response.json();
+    const data = JSON.parse(response.body || '{}');
     res.json({ success: true, id: data.id });
   } catch (e) {
     console.error('Send welcome error', e?.message || e);
@@ -406,8 +426,6 @@ app.post('/api/send-welcome-email', async (req, res) => {
 app.post('/api/send-duplicate-subscription-email', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return res.status(500).json({ error: 'RESEND_API_KEY not configured' });
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
   const normalizedEmail = normalizeEmail(email);
 
@@ -416,23 +434,21 @@ app.post('/api/send-duplicate-subscription-email', async (req, res) => {
       templateId: NEWSLETTER_TEMPLATE_IDS.duplicate,
       email: normalizedEmail,
     });
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: normalizedEmail,
-        subject: emailContent.subject,
-        html: emailContent.html,
-        text: emailContent.text,
-      }),
+    const response = await sendResendEmail({
+      from: fromEmail,
+      to: normalizedEmail,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text,
     });
     if (!response.ok) {
-      const err = await response.text();
-      console.error('Resend duplicate subscription error', err);
-      return res.status(500).json({ error: 'Failed to send duplicate subscription email' });
+      console.error('Resend duplicate subscription error', response.body);
+      return res.status(502).json({
+        error: 'Duplicate subscription email was not sent.',
+        detail: response.body.slice(0, 500),
+      });
     }
-    const data = await response.json();
+    const data = JSON.parse(response.body || '{}');
     res.json({ success: true, id: data.id });
   } catch (e) {
     console.error('Send duplicate subscription error', e?.message || e);

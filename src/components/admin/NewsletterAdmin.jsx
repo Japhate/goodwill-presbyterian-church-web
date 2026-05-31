@@ -19,9 +19,10 @@ function formatDate(value) {
   });
 }
 
-function TemplateEditor({ template, onSave }) {
+function TemplateEditor({ template, onSave, onSendTestEmail, testEmail }) {
   const [formData, setFormData] = useState(template);
   const [saving, setSaving] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
 
   useEffect(() => {
     setFormData(template);
@@ -29,6 +30,20 @@ function TemplateEditor({ template, onSave }) {
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSendTest = async () => {
+    if (!testEmail) {
+      window.alert("Enter a test email address first.");
+      return;
+    }
+
+    setSendingTest(true);
+    try {
+      await onSendTestEmail(formData.id, testEmail);
+    } finally {
+      setSendingTest(false);
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -82,17 +97,24 @@ function TemplateEditor({ template, onSave }) {
         </div>
       </div>
 
-      <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={saving}>
-        <Save className="mr-2 h-4 w-4" />
-        {saving ? "Saving..." : "Save Template"}
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={saving}>
+          <Save className="mr-2 h-4 w-4" />
+          {saving ? "Saving..." : "Save Template"}
+        </Button>
+        <Button type="button" variant="outline" onClick={handleSendTest} disabled={sendingTest}>
+          <Mail className="mr-2 h-4 w-4" />
+          {sendingTest ? "Sending..." : "Send Test"}
+        </Button>
+      </div>
     </form>
   );
 }
 
-export default function NewsletterAdmin({ subscribers, templates, onAddSubscriber, onDeleteSubscriber, onSaveTemplate }) {
+export default function NewsletterAdmin({ subscribers, templates, onAddSubscriber, onDeleteSubscriber, onSaveTemplate, onSendTestEmail }) {
   const [email, setEmail] = useState("");
   const [search, setSearch] = useState("");
+  const [testEmail, setTestEmail] = useState("");
   const [adding, setAdding] = useState(false);
 
   const normalizedTemplates = useMemo(() => {
@@ -207,9 +229,19 @@ export default function NewsletterAdmin({ subscribers, templates, onAddSubscribe
           </h2>
           <p className="mt-1 text-sm text-gray-600">Edit the welcome email and the message sent when someone tries to subscribe again.</p>
         </div>
+        <div className="mb-5 max-w-md">
+          <label className="mb-1 block text-sm font-semibold text-gray-700">Test Email Address</label>
+          <Input type="email" value={testEmail} onChange={(event) => setTestEmail(event.target.value)} placeholder="Send a test to..." />
+        </div>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           {normalizedTemplates.map((template) => (
-            <TemplateEditor key={template.id} template={template} onSave={onSaveTemplate} />
+            <TemplateEditor
+              key={template.id}
+              template={template}
+              testEmail={testEmail.trim().toLowerCase()}
+              onSave={onSaveTemplate}
+              onSendTestEmail={onSendTestEmail}
+            />
           ))}
         </div>
       </div>

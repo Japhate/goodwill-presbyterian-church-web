@@ -27,7 +27,7 @@ import NewsletterAdmin from '@/components/admin/NewsletterAdmin';
 import { HeroSlide } from '@/entities/HeroSlide';
 import { firebaseEnabled } from '@/lib/firebase';
 import { DEFAULT_HOMEPAGE_BANNERS } from '@/lib/homepageBanners';
-import { DEFAULT_EMAIL_TEMPLATES } from '@/lib/newsletterTemplates';
+import { DEFAULT_EMAIL_TEMPLATES, NEWSLETTER_TEMPLATE_IDS } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
 import { Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut, BellRing, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,11 @@ function createUnsubscribeToken() {
     return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
   }
   return `${Date.now()}${Math.random()}`.replace(/\D/g, "").padEnd(36, "0").slice(0, 36);
+}
+
+async function getApiErrorMessage(response, fallback) {
+  const body = await response.json().catch(() => null);
+  return [body?.error, body?.detail].filter(Boolean).join(" ") || fallback;
 }
 
 function consumeAutoLogoutNotice() {
@@ -338,6 +343,44 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Unable to save email template:', error);
       window.alert(getSaveErrorMessage(error));
+    }
+  };
+
+  const handleSendNewsletterTestEmail = async (templateId, email) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return;
+
+    const unsubscribeToken = createUnsubscribeToken();
+    const emailKey = encodeURIComponent(normalizedEmail);
+    const endpoint = templateId === NEWSLETTER_TEMPLATE_IDS.duplicate
+      ? '/api/send-duplicate-subscription-email'
+      : '/api/send-welcome-email';
+    const payload = templateId === NEWSLETTER_TEMPLATE_IDS.duplicate
+      ? { email: normalizedEmail }
+      : {
+          email: normalizedEmail,
+          emailKey,
+          unsubscribeToken,
+          host: window.location.host,
+          protocol: window.location.protocol.replace(':', ''),
+        };
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorMessage = await getApiErrorMessage(response, 'Unable to send the test email.');
+        window.alert(errorMessage);
+        return;
+      }
+
+      window.alert('Test email sent.');
+    } catch (error) {
+      window.alert(`Unable to send the test email: ${error.message}`);
     }
   };
 
@@ -768,6 +811,7 @@ export default function AdminPage() {
           onAddSubscriber={handleAddNewsletterSubscriber}
           onDeleteSubscriber={handleDeleteNewsletterSubscriber}
           onSaveTemplate={handleSaveEmailTemplate}
+          onSendTestEmail={handleSendNewsletterTestEmail}
         />;
       default:
         return null;

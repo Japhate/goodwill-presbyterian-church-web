@@ -27,6 +27,11 @@ function isValidNewsletterEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+async function getApiErrorMessage(response, fallback) {
+  const body = await response.json().catch(() => null);
+  return [body?.error, body?.detail].filter(Boolean).join(" ") || fallback;
+}
+
 export default function Home() {
   const [announcements, setAnnouncements] = useState([]);
   const [latestSermon, setLatestSermon] = useState(null);
@@ -427,10 +432,11 @@ export default function Home() {
           });
 
           if (!welcomeResponse.ok) {
-            setNewsletterMessage("Thank you for subscribing. You are on the list, but the welcome email could not be sent.");
+            const errorMessage = await getApiErrorMessage(welcomeResponse, "The welcome email could not be sent.");
+            setNewsletterMessage(`Thank you for subscribing. You are on the list, but ${errorMessage}`);
           }
-        } catch {
-          setNewsletterMessage("Thank you for subscribing. You are on the list, but the welcome email could not be sent.");
+        } catch (error) {
+          setNewsletterMessage(`Thank you for subscribing. You are on the list, but the welcome email request failed: ${error.message}`);
         }
         setTimeout(() => setNewsletterMessage(""), 5000);
     } catch (error) {
@@ -447,10 +453,11 @@ export default function Home() {
             });
 
             if (!duplicateResponse.ok) {
-              setNewsletterMessage("Thank you. You're already subscribed with that email, but we could not send the confirmation email.");
+              const errorMessage = await getApiErrorMessage(duplicateResponse, "the confirmation email could not be sent.");
+              setNewsletterMessage(`Thank you. You're already subscribed with that email, but ${errorMessage}`);
             }
-          } catch {
-            setNewsletterMessage("Thank you. You're already subscribed with that email, but we could not send the confirmation email.");
+          } catch (error) {
+            setNewsletterMessage(`Thank you. You're already subscribed with that email, but the confirmation email request failed: ${error.message}`);
           }
           setTimeout(() => setNewsletterMessage(""), 5000);
           return;
