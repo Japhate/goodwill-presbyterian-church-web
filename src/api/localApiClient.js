@@ -1,5 +1,6 @@
 import { firebaseApi } from "@/api/firebaseApiClient";
 import { firebaseEnabled } from "@/lib/firebase";
+import { DEFAULT_EMAIL_TEMPLATES } from "@/lib/newsletterTemplates";
 
 const LOCAL_API = import.meta.env.VITE_LOCAL_API_URL || '';
 const LOCAL_STORAGE_KEY = 'goodwill-local-data-v5';
@@ -294,6 +295,7 @@ const seedData = {
     },
   ],
   NewsletterSubscriptions: [],
+  EmailTemplates: DEFAULT_EMAIL_TEMPLATES,
 };
 
 const memoryData = structuredClone(seedData);
@@ -406,7 +408,11 @@ function localEntity(entityName) {
         }
 
         const store = getStore();
-        const item = { created_date: new Date().toISOString(), ...data, id: `${entityName}-${Date.now()}` };
+        const item = {
+          created_date: new Date().toISOString(),
+          ...data,
+          id: entityName === 'EmailTemplates' && data.id ? data.id : `${entityName}-${Date.now()}`,
+        };
         store[entityName] = [...(store[entityName] || []), item];
         setStore(store);
         return item;

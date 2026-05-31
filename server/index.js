@@ -3,6 +3,14 @@ import fs from 'fs';
 import path from 'path';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
+import { initializeApp, getApps } from 'firebase/app';
+import { doc, getDoc, getFirestore } from 'firebase/firestore';
+import {
+  getDefaultEmailTemplate,
+  mergeEmailTemplate,
+  NEWSLETTER_TEMPLATE_IDS,
+  renderNewsletterTemplateText,
+} from '../src/lib/newsletterTemplates.js';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -59,6 +67,132 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function getFirebaseServerConfig() {
+  const config = {
+    apiKey: process.env.VITE_FIREBASE_API_KEY,
+    authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.VITE_FIREBASE_APP_ID,
+  };
+
+  return Object.values(config).every(Boolean) ? config : null;
+}
+
+function getServerFirestore() {
+  const config = getFirebaseServerConfig();
+  if (!config) return null;
+
+  const app = getApps().find((firebaseApp) => firebaseApp.name === 'server') || initializeApp(config, 'server');
+  return getFirestore(app);
+}
+
+async function readEmailTemplate(templateId) {
+  const defaultTemplate = getDefaultEmailTemplate(templateId);
+
+  try {
+    const db = getServerFirestore();
+    if (db) {
+      const snapshot = await getDoc(doc(db, 'EmailTemplates', templateId));
+      if (snapshot.exists()) {
+        return mergeEmailTemplate({ ...snapshot.data(), id: snapshot.id }, templateId);
+      }
+    }
+  } catch (error) {
+    console.warn('Unable to read email template from Firestore', error?.message || error);
+  }
+
+  const localTemplate = readEntity('EmailTemplates').find((template) => template.id === templateId);
+  return mergeEmailTemplate(localTemplate || defaultTemplate, templateId);
+}
+
+function linkifyEscapedText(escapedText, variables) {
+  let text = escapedText;
+  const escapedUnsubscribeUrl = escapeHtml(variables.unsubscribeUrl);
+  const escapedSupportEmail = escapeHtml(variables.supportEmail);
+  const escapedSupportPhone = escapeHtml(variables.supportPhone);
+
+  if (escapedUnsubscribeUrl) {
+    text = text.replaceAll(
+      escapedUnsubscribeUrl,
+      `<a href="${escapedUnsubscribeUrl}" style="color:#8a5a16;text-decoration:underline;">${escapedUnsubscribeUrl}</a>`
+    );
+  }
+
+  if (escapedSupportEmail) {
+    text = text.replaceAll(
+      escapedSupportEmail,
+      `<a href="mailto:${escapedSupportEmail}" style="color:#8a5a16;font-weight:bold;text-decoration:underline;">${escapedSupportEmail}</a>`
+    );
+  }
+
+  if (escapedSupportPhone) {
+    text = text.replaceAll(
+      escapedSupportPhone,
+      `<a href="tel:${escapedSupportPhone}" style="color:#8a5a16;font-weight:bold;text-decoration:underline;">${escapedSupportPhone}</a>`
+    );
+  }
+
+  return text.replaceAll('\n', '<br />');
+}
+
+function renderEmailTextBlock(text, variables, options = {}) {
+  const rendered = renderNewsletterTemplateText(text, variables);
+  return rendered
+    .split(/\n{2,}/)
+    .filter((paragraph) => paragraph.trim())
+    .map((paragraph) => {
+      const content = linkifyEscapedText(escapeHtml(paragraph), variables);
+      const style = options.highlight
+        ? 'font-size:16px;line-height:1.6;margin:0 0 22px;background:#fff7ed;border-left:4px solid #d97706;padding:14px 16px;'
+        : 'font-size:16px;line-height:1.6;margin:0 0 18px;';
+      return `<p style="${style}">${content}</p>`;
+    })
+    .join('');
+}
+
+async function buildNewsletterEmail({ templateId, email, unsubscribeUrl = '' }) {
+  const template = await readEmailTemplate(templateId);
+  const variables = {
+    email,
+    unsubscribeUrl,
+    supportPhone: template.support_phone || '',
+    supportEmail: template.support_email || '',
+  };
+  const subject = renderNewsletterTemplateText(template.subject, variables);
+  const heading = renderNewsletterTemplateText(template.heading, variables);
+  const bodyHtml = renderEmailTextBlock(template.body, variables);
+  const footerHtml = renderEmailTextBlock(template.footer, variables);
+  const text = [
+    renderNewsletterTemplateText(template.body, variables),
+    renderNewsletterTemplateText(template.footer, variables),
+  ].filter(Boolean).join('\n\n');
+
+  return {
+    subject,
+    heading,
+    html: `
+      <div style="margin:0;padding:0;background:#f8f3ea;font-family:Arial,Helvetica,sans-serif;color:#2f241c;">
+        <div style="max-width:640px;margin:0 auto;padding:32px 18px;">
+          <div style="background:#ffffff;border:1px solid #eadcc7;border-radius:12px;overflow:hidden;">
+            <div style="background:#4b342a;color:#ffffff;padding:24px 28px;">
+              <h1 style="margin:0;font-size:24px;line-height:1.25;">${escapeHtml(heading)}</h1>
+            </div>
+            <div style="padding:28px;">
+              ${bodyHtml}
+            </div>
+            <div style="border-top:1px solid #eadcc7;background:#fbf7f0;padding:18px 28px;color:#6f6258;font-size:12px;line-height:1.5;">
+              ${footerHtml}
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+    text,
+  };
 }
 
 // Simple filter: exact match on keys in filter object
@@ -118,6 +252,26 @@ app.post('/api/entities/:entity', (req, res) => {
       email,
       email_key: emailKey,
       status: 'active',
+      created_date: data.created_date || new Date().toISOString(),
+    };
+
+    if (existingIndex === -1) {
+      items.push(item);
+    } else {
+      items[existingIndex] = { ...items[existingIndex], ...item };
+    }
+
+    writeEntity(entity, items);
+    return res.status(201).json(item);
+  }
+
+  if (entity === 'EmailTemplates') {
+    const id = data.id;
+    if (!id) return res.status(400).json({ error: 'Email template id is required' });
+    const existingIndex = items.findIndex(item => String(item.id) === String(id));
+    const item = {
+      ...data,
+      id,
       created_date: data.created_date || new Date().toISOString(),
     };
 
@@ -218,52 +372,22 @@ app.post('/api/send-welcome-email', async (req, res) => {
   }
 
   const unsubscribeUrl = `${siteProtocol}://${siteHost}/Unsubscribe?${unsubscribeParams.toString()}`;
-  const escapedEmail = escapeHtml(normalizedEmail);
-  const escapedUnsubscribeUrl = escapeHtml(unsubscribeUrl);
 
   try {
+    const emailContent = await buildNewsletterEmail({
+      templateId: NEWSLETTER_TEMPLATE_IDS.welcome,
+      email: normalizedEmail,
+      unsubscribeUrl,
+    });
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: fromEmail,
         to: normalizedEmail,
-        subject: 'Welcome to Goodwill Presbyterian Church',
-        html: `
-          <div style="margin:0;padding:0;background:#f8f3ea;font-family:Arial,Helvetica,sans-serif;color:#2f241c;">
-            <div style="max-width:640px;margin:0 auto;padding:32px 18px;">
-              <div style="background:#ffffff;border:1px solid #eadcc7;border-radius:12px;overflow:hidden;">
-                <div style="background:#4b342a;color:#ffffff;padding:24px 28px;">
-                  <h1 style="margin:0;font-size:24px;line-height:1.25;">Welcome to Goodwill Presbyterian Church</h1>
-                </div>
-                <div style="padding:28px;">
-                  <p style="font-size:16px;line-height:1.6;margin:0 0 18px;">Grace and peace to you.</p>
-                  <p style="font-size:16px;line-height:1.6;margin:0 0 18px;">
-                    Thank you for subscribing to updates from Goodwill Presbyterian Church. We are grateful to stay connected with you as we share worship opportunities, church news, ministry updates, and moments of encouragement for the journey of faith.
-                  </p>
-                  <p style="font-size:16px;line-height:1.6;margin:0 0 18px;">
-                    Our prayer is that every message you receive will help you feel welcomed, informed, and reminded that you are part of a community seeking to love God, serve others, and walk together in hope.
-                  </p>
-                  <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">
-                    May the Lord bless you and keep you, and may God's peace be with you today.
-                  </p>
-                  <p style="font-size:16px;line-height:1.6;margin:0;">
-                    With gratitude,<br />
-                    <strong>Goodwill Presbyterian Church</strong>
-                  </p>
-                </div>
-                <div style="border-top:1px solid #eadcc7;background:#fbf7f0;padding:18px 28px;color:#6f6258;font-size:12px;line-height:1.5;">
-                  <p style="margin:0 0 8px;">This message was sent to ${escapedEmail} because you subscribed to updates from Goodwill Presbyterian Church.</p>
-                  <p style="margin:0;">
-                    If you no longer wish to receive updates, you may
-                    <a href="${escapedUnsubscribeUrl}" style="color:#8a5a16;text-decoration:underline;">unsubscribe here</a>.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        `,
-        text: `Grace and peace to you.\n\nThank you for subscribing to updates from Goodwill Presbyterian Church. We are grateful to stay connected with you as we share worship opportunities, church news, ministry updates, and moments of encouragement for the journey of faith.\n\nOur prayer is that every message you receive will help you feel welcomed, informed, and reminded that you are part of a community seeking to love God, serve others, and walk together in hope.\n\nMay the Lord bless you and keep you, and may God's peace be with you today.\n\nWith gratitude,\nGoodwill Presbyterian Church\n\nThis message was sent to ${normalizedEmail}. If you no longer wish to receive updates, unsubscribe here: ${unsubscribeUrl}`,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
       }),
     });
     if (!response.ok) {
@@ -286,62 +410,21 @@ app.post('/api/send-duplicate-subscription-email', async (req, res) => {
   if (!key) return res.status(500).json({ error: 'RESEND_API_KEY not configured' });
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
   const normalizedEmail = normalizeEmail(email);
-  const escapedEmail = escapeHtml(normalizedEmail);
-  const supportPhone = '80345905432';
-  const supportEmail = 'nebajaphate@gmail.com';
 
   try {
+    const emailContent = await buildNewsletterEmail({
+      templateId: NEWSLETTER_TEMPLATE_IDS.duplicate,
+      email: normalizedEmail,
+    });
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: fromEmail,
         to: normalizedEmail,
-        subject: 'You are already on Goodwill Presbyterian Church\'s mailing list',
-        html: `
-          <div style="margin:0;padding:0;background:#f8f3ea;font-family:Arial,Helvetica,sans-serif;color:#2f241c;">
-            <div style="max-width:640px;margin:0 auto;padding:32px 18px;">
-              <div style="background:#ffffff;border:1px solid #eadcc7;border-radius:12px;overflow:hidden;">
-                <div style="background:#4b342a;color:#ffffff;padding:24px 28px;">
-                  <h1 style="margin:0;font-size:24px;line-height:1.25;">You are already subscribed</h1>
-                </div>
-                <div style="padding:28px;">
-                  <p style="font-size:16px;line-height:1.6;margin:0 0 18px;">Grace and peace to you.</p>
-                  <p style="font-size:16px;line-height:1.6;margin:0 0 18px;">
-                    This email address is already in Goodwill Presbyterian Church's mailing list.
-                  </p>
-                  <p style="font-size:16px;line-height:1.6;margin:0 0 22px;background:#fff7ed;border-left:4px solid #d97706;padding:14px 16px;">
-                    If for some reason you are not receiving notifications, please reach out to us at
-                    <a href="tel:${supportPhone}" style="color:#8a5a16;font-weight:bold;text-decoration:underline;">${supportPhone}</a>
-                    or send an email to
-                    <a href="mailto:${supportEmail}" style="color:#8a5a16;font-weight:bold;text-decoration:underline;">${supportEmail}</a>.
-                  </p>
-                  <p style="font-size:16px;line-height:1.6;margin:0 0 18px;">
-                    Thank you for subscribing to updates from Goodwill Presbyterian Church. We are grateful to stay connected with you as we share worship opportunities, church news, ministry updates, and moments of encouragement for the journey of faith.
-                  </p>
-                  <p style="font-size:16px;line-height:1.6;margin:0 0 18px;">
-                    Our prayer is that every message you receive will help you feel welcomed, informed, and reminded that you are part of a community seeking to love God, serve others, and walk together in hope.
-                  </p>
-                  <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">
-                    May the Lord bless you and keep you, and may God's peace be with you today.
-                  </p>
-                  <p style="font-size:16px;line-height:1.6;margin:0;">
-                    With gratitude,<br />
-                    <strong>Goodwill Presbyterian Church</strong>
-                  </p>
-                </div>
-                <div style="border-top:1px solid #eadcc7;background:#fbf7f0;padding:18px 28px;color:#6f6258;font-size:12px;line-height:1.5;">
-                  <p style="margin:0 0 8px;">This message was sent to ${escapedEmail} because you attempted to subscribe to updates from Goodwill Presbyterian Church.</p>
-                  <p style="margin:0;">
-                    If you no longer wish to receive updates, please use the unsubscribe link in any Goodwill newsletter notification or contact us at
-                    <a href="mailto:${supportEmail}" style="color:#8a5a16;text-decoration:underline;">${supportEmail}</a>.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        `,
-        text: `Grace and peace to you.\n\nThis email address is already in Goodwill Presbyterian Church's mailing list.\n\nIf for some reason you are not receiving notifications, please reach out to us at ${supportPhone} or send an email to ${supportEmail}.\n\nThank you for subscribing to updates from Goodwill Presbyterian Church. We are grateful to stay connected with you as we share worship opportunities, church news, ministry updates, and moments of encouragement for the journey of faith.\n\nOur prayer is that every message you receive will help you feel welcomed, informed, and reminded that you are part of a community seeking to love God, serve others, and walk together in hope.\n\nMay the Lord bless you and keep you, and may God's peace be with you today.\n\nWith gratitude,\nGoodwill Presbyterian Church\n\nThis message was sent to ${normalizedEmail} because you attempted to subscribe to updates from Goodwill Presbyterian Church.\n\nIf you no longer wish to receive updates, please use the unsubscribe link in any Goodwill newsletter notification or contact us at ${supportEmail}.`,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
       }),
     });
     if (!response.ok) {

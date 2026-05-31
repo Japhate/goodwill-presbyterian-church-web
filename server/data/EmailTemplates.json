@@ -1,0 +1,22 @@
+[
+  {
+    "id": "welcome",
+    "name": "Welcome Email",
+    "subject": "Welcome to Goodwill Presbyterian Church",
+    "heading": "Welcome to Goodwill Presbyterian Church",
+    "body": "Grace and peace to you.\n\nThank you for subscribing to updates from Goodwill Presbyterian Church. We are grateful to stay connected with you as we share worship opportunities, church news, ministry updates, and moments of encouragement for the journey of faith.\n\nOur prayer is that every message you receive will help you feel welcomed, informed, and reminded that you are part of a community seeking to love God, serve others, and walk together in hope.\n\nMay the Lord bless you and keep you, and may God's peace be with you today.\n\nWith gratitude,\nGoodwill Presbyterian Church",
+    "footer": "This message was sent to [subscriber email] because you subscribed to updates from Goodwill Presbyterian Church.\n\nIf you no longer wish to receive updates, unsubscribe here:\n[unsubscribe link]",
+    "support_phone": "80345905432",
+    "support_email": "nebajaphate@gmail.com"
+  },
+  {
+    "id": "duplicate",
+    "name": "Already Subscribed Email",
+    "subject": "You are already on Goodwill Presbyterian Church's mailing list",
+    "heading": "You are already subscribed",
+    "body": "Grace and peace to you.\n\nThis email address is already in Goodwill Presbyterian Church's mailing list.\n\nIf for some reason you are not receiving notifications, please reach out to us at [support phone] or send an email to [support email].\n\nThank you for subscribing to updates from Goodwill Presbyterian Church. We are grateful to stay connected with you as we share worship opportunities, church news, ministry updates, and moments of encouragement for the journey of faith.\n\nOur prayer is that every message you receive will help you feel welcomed, informed, and reminded that you are part of a community seeking to love God, serve others, and walk together in hope.\n\nMay the Lord bless you and keep you, and may God's peace be with you today.\n\nWith gratitude,\nGoodwill Presbyterian Church",
+    "footer": "This message was sent to [subscriber email] because you attempted to subscribe to updates from Goodwill Presbyterian Church.\n\nIf you no longer wish to receive updates, please use the unsubscribe link in any Goodwill newsletter notification or contact us at [support email].",
+    "support_phone": "80345905432",
+    "support_email": "nebajaphate@gmail.com"
+  }
+]

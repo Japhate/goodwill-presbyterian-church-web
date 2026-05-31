@@ -131,6 +131,13 @@ function firebaseEntity(entityName) {
         return { ...subscription, id: emailKey };
       }
 
+      if (entityName === "EmailTemplates") {
+        const templateId = item.id;
+        if (!templateId) throw new Error("Email template id is required");
+        await setDoc(doc(firestore, entityName, templateId), item);
+        return { ...item, id: templateId };
+      }
+
       const created = await addDoc(collection(firestore, entityName), item);
       return { ...item, id: created.id };
     },

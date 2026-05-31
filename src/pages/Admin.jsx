@@ -6,6 +6,8 @@ import { Bulletins } from '@/entities/Bulletins';
 import { HomeBannerMessages } from '@/entities/HomeBannerMessages';
 import { Banner as LegacyBanner } from '@/entities/Banner';
 import { SitePopups } from '@/entities/SitePopups';
+import { NewsletterSubscriptions } from '@/entities/NewsletterSubscriptions';
+import { EmailTemplates } from '@/entities/EmailTemplates';
 import { User } from '@/entities/User';
 import AnnouncementList from '@/components/admin/AnnouncementList';
 import AnnouncementForm from '@/components/admin/AnnouncementForm';
@@ -21,11 +23,13 @@ import HeroSlideList from '@/components/admin/HeroSlideList';
 import HeroSlideForm from '@/components/admin/HeroSlideForm';
 import SitePopupList from '@/components/admin/SitePopupList';
 import SitePopupForm from '@/components/admin/SitePopupForm';
+import NewsletterAdmin from '@/components/admin/NewsletterAdmin';
 import { HeroSlide } from '@/entities/HeroSlide';
 import { firebaseEnabled } from '@/lib/firebase';
 import { DEFAULT_HOMEPAGE_BANNERS } from '@/lib/homepageBanners';
+import { DEFAULT_EMAIL_TEMPLATES } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
-import { Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut, BellRing } from 'lucide-react';
+import { Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut, BellRing, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -47,6 +51,15 @@ function prepareSitePopupData(data) {
   return popupData;
 }
 
+function createUnsubscribeToken() {
+  const bytes = new Uint8Array(18);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  return `${Date.now()}${Math.random()}`.replace(/\D/g, "").padEnd(36, "0").slice(0, 36);
+}
+
 function consumeAutoLogoutNotice() {
   if (typeof window === 'undefined') return '';
   if (window.localStorage.getItem(AUTO_LOGOUT_NOTICE_KEY) !== 'true') return '';
@@ -63,7 +76,9 @@ export default function AdminPage() {
   const [banners, setBanners] = useState([]);
   const [heroSlides, setHeroSlides] = useState([]);
   const [sitePopups, setSitePopups] = useState([]);
-  const [view, setView] = useState('announcements'); // 'announcements', 'worshipEvents', 'pastEvents', 'sermons', 'bulletins', 'banners', 'hiddenAnnouncements', 'heroSlides', 'sitePopups'
+  const [newsletterSubscribers, setNewsletterSubscribers] = useState([]);
+  const [emailTemplates, setEmailTemplates] = useState([]);
+  const [view, setView] = useState('announcements'); // 'announcements', 'worshipEvents', 'pastEvents', 'sermons', 'bulletins', 'banners', 'hiddenAnnouncements', 'heroSlides', 'sitePopups', 'newsletter'
   const [formView, setFormView] = useState(null); // 'announcement', 'worshipEvent', 'sermon', 'bulletin', 'banner', 'heroSlide', 'sitePopup', or null
   const [editingItem, setEditingItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -85,6 +100,7 @@ export default function AdminPage() {
       ['homepage banners', loadBanners],
       ['hero slides', loadHeroSlides],
       ['homepage popups', loadSitePopups],
+      ['newsletter', loadNewsletterAdmin],
     ];
 
     const results = await Promise.allSettled(loaders.map(([, loader]) => loader()));
@@ -244,6 +260,84 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Unable to load homepage popups:', error);
       setSitePopups([fallbackPopup]);
+    }
+  };
+
+  const loadNewsletterAdmin = async () => {
+    const [subscribers, templates] = await Promise.all([
+      NewsletterSubscriptions.list('-created_date', 500),
+      EmailTemplates.list('name', 20).catch(() => []),
+    ]);
+
+    setNewsletterSubscribers(subscribers);
+
+    const seededTemplates = [...templates];
+    for (const defaultTemplate of DEFAULT_EMAIL_TEMPLATES) {
+      if (!seededTemplates.some((template) => template.id === defaultTemplate.id)) {
+        try {
+          const createdTemplate = await EmailTemplates.create(defaultTemplate);
+          seededTemplates.push(createdTemplate);
+        } catch (error) {
+          console.error(`Unable to create ${defaultTemplate.id} email template:`, error);
+          seededTemplates.push({ ...defaultTemplate, is_unsaved_fallback: true });
+        }
+      }
+    }
+
+    setEmailTemplates(seededTemplates);
+  };
+
+  const handleAddNewsletterSubscriber = async (email) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return;
+
+    try {
+      await NewsletterSubscriptions.create({
+        email: normalizedEmail,
+        email_key: encodeURIComponent(normalizedEmail),
+        unsubscribe_token: createUnsubscribeToken(),
+        status: 'active',
+      });
+      await loadNewsletterAdmin();
+    } catch (error) {
+      console.error('Unable to add newsletter subscriber:', error);
+      if (error?.message === 'already-subscribed' || error?.status === 409) {
+        window.alert('That email address is already subscribed.');
+        return;
+      }
+      window.alert(getSaveErrorMessage(error));
+    }
+  };
+
+  const handleDeleteNewsletterSubscriber = async (id) => {
+    if (!window.confirm('Remove this email address from the newsletter list?')) return;
+
+    try {
+      await NewsletterSubscriptions.delete(id);
+      await loadNewsletterAdmin();
+    } catch (error) {
+      console.error('Unable to delete newsletter subscriber:', error);
+      window.alert(getSaveErrorMessage(error));
+    }
+  };
+
+  const handleSaveEmailTemplate = async (id, templateData) => {
+    const preparedTemplate = {
+      ...templateData,
+      id,
+      updated_date: new Date().toISOString(),
+    };
+
+    try {
+      if (emailTemplates.some((template) => template.id === id && !template.is_unsaved_fallback)) {
+        await EmailTemplates.update(id, preparedTemplate);
+      } else {
+        await EmailTemplates.create(preparedTemplate);
+      }
+      await loadNewsletterAdmin();
+    } catch (error) {
+      console.error('Unable to save email template:', error);
+      window.alert(getSaveErrorMessage(error));
     }
   };
 
@@ -667,6 +761,14 @@ export default function AdminPage() {
           onDuplicate={(item) => handleDuplicate(item, 'sitePopup')}
           onAddNew={() => handleAddNew('sitePopup')}
         />;
+      case 'newsletter':
+        return <NewsletterAdmin
+          subscribers={newsletterSubscribers}
+          templates={emailTemplates}
+          onAddSubscriber={handleAddNewsletterSubscriber}
+          onDeleteSubscriber={handleDeleteNewsletterSubscriber}
+          onSaveTemplate={handleSaveEmailTemplate}
+        />;
       default:
         return null;
     }
@@ -752,6 +854,13 @@ export default function AdminPage() {
               className={`gap-2 ${view === 'sitePopups' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
             >
               <BellRing className="w-5 h-5" /> Homepage Popups
+            </Button>
+            <Button
+              variant={view === 'newsletter' ? 'default' : 'outline'}
+              onClick={() => { setView('newsletter'); setFormView(null); }}
+              className={`gap-2 ${view === 'newsletter' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
+            >
+              <Mail className="w-5 h-5" /> Newsletter
             </Button>
         </div>
         
