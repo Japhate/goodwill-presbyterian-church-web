@@ -443,7 +443,7 @@ export default function Home() {
         console.error("Newsletter subscription error:", error);
         if (error?.message === "already-subscribed" || error?.status === 409) {
           setNewsletterStatus("success");
-          setNewsletterMessage("You're already subscribed with that email.");
+          setNewsletterMessage("You are already subscribed with this email. Thank you!");
           setNewsletterEmail("");
           try {
             const duplicateResponse = await fetch('/api/send-duplicate-subscription-email', {
@@ -453,13 +453,10 @@ export default function Home() {
             });
 
             if (!duplicateResponse.ok) {
-              const errorMessage = await getApiErrorMessage(duplicateResponse, "the confirmation email could not be sent.");
-              setNewsletterMessage(`You're already subscribed with that email, but ${errorMessage}`);
-            } else {
-              setNewsletterMessage("You're already subscribed with that email. We sent a reminder email with help if you are not receiving updates.");
+              await getApiErrorMessage(duplicateResponse, "the confirmation email could not be sent.");
             }
           } catch (error) {
-            setNewsletterMessage(`You're already subscribed with that email, but the confirmation email request failed: ${error.message}`);
+            console.error("Duplicate subscription email request failed:", error);
           }
           setTimeout(() => setNewsletterMessage(""), 5000);
           return;
