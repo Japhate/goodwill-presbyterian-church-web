@@ -127,7 +127,7 @@ export default function AdminSetup() {
             <ShieldCheck className="h-4 w-4" />
             Site Administrator Setup
           </p>
-          <h1 className="mt-2 text-2xl font-bold">Create Your Admin Password</h1>
+          <h1 className="mt-2 text-2xl font-bold">Create Your New Admin Password</h1>
           <p className="mt-2 text-sm text-amber-50">Enter your name and the password you want to use.</p>
         </div>
 
@@ -219,7 +219,7 @@ export default function AdminSetup() {
 
             <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700" disabled={submitting || !email}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Change Password
+              Create New Password
             </Button>
           </form>
         )}

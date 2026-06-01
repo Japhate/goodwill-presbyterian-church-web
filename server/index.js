@@ -479,7 +479,10 @@ function buildAdminInvitationEmail({ email, setupLink, expiresAt }) {
       `Email: ${email}`,
       expiresText ? `Invitation expires: ${expiresText}` : '',
       '',
-      'Create My Password:',
+      'Create New Password:',
+      setupLink,
+      '',
+      'Use the button above or copy and paste the following link in your browser:',
       setupLink,
       '',
       'If you did not expect this message, please ignore it.',
@@ -501,8 +504,12 @@ function buildAdminInvitationEmail({ email, setupLink, expiresAt }) {
                 ${expiresText ? `<p style="margin:0;"><strong>Invitation expires:</strong> ${escapeHtml(expiresText)}</p>` : ''}
               </div>
               <p style="margin:0 0 22px;text-align:center;">
-                <a href="${escapedSetupLink}" style="display:inline-block;background:#d97706;color:#ffffff;font-weight:bold;text-decoration:none;border-radius:8px;padding:12px 18px;">Create My Password</a>
+                <a href="${escapedSetupLink}" style="display:inline-block;background:#d97706;color:#ffffff;font-weight:bold;text-decoration:none;border-radius:8px;padding:12px 18px;">Create New Password</a>
               </p>
+              <div style="background:#fbf7f0;border:1px solid #eadcc7;border-radius:10px;padding:14px;margin:0 0 4px;">
+                <p style="margin:0 0 8px;font-size:13px;font-weight:bold;color:#5f4735;">Use the button above or copy and paste the following link in your browser:</p>
+                <a href="${escapedSetupLink}" style="color:#8a4b05;font-size:13px;line-height:1.5;word-break:break-all;">${escapedSetupLink}</a>
+              </div>
             </div>
             <div style="border-top:1px solid #eadcc7;background:#fbf7f0;padding:18px 28px;color:#6f6258;font-size:12px;line-height:1.5;">
               If you did not expect this message, please ignore it.
