@@ -108,7 +108,7 @@ export default function DeveloperPanel({
   const handleDeleteAdmin = async (admin) => {
     const adminEmail = admin.email || admin.auth_email || "this administrator";
     if (!admin.firestore_exists) return;
-    if (!window.confirm(`Remove ${adminEmail} from the site administrators list? This removes their Firestore admin access.`)) return;
+    if (!window.confirm(`Remove ${adminEmail} from the site administrators list? This deletes their Firestore admin record and revokes admin panel access. Their past activity logs will remain.`)) return;
 
     setDeletingAdminUid(admin.uid);
     setAdminStatus("");
@@ -179,6 +179,9 @@ export default function DeveloperPanel({
             <p className="mt-1 text-sm text-gray-600">
               Compare Firebase Auth accounts with the Firestore admin records used by the admin panel.
             </p>
+            <p className="mt-1 text-xs font-semibold text-amber-800">
+              Removing an admin deletes their Firestore admin record, revokes admin panel access, and keeps their existing activity logs.
+            </p>
           </div>
         </div>
 
@@ -234,13 +237,15 @@ export default function DeveloperPanel({
                       {admin.firestore_exists ? (
                         <Button
                           type="button"
-                          variant="ghost"
-                          size="icon"
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleDeleteAdmin(admin)}
                           disabled={!canManageAdmins || isCurrentDeveloper || deletingAdminUid === admin.uid}
                           title={isCurrentDeveloper ? "The site developer cannot delete their own admin record" : "Remove Firestore admin access"}
+                          className="gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
                         >
                           <Trash2 className="h-4 w-4 text-red-600" />
+                          {deletingAdminUid === admin.uid ? "Removing..." : "Remove Admin"}
                         </Button>
                       ) : (
                         <span className="text-xs text-gray-500">No Firestore record</span>
