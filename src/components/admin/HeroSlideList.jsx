@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowDown, ArrowUp, EyeOff, ExternalLink, GripVertical, Link, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, EyeOff, ExternalLink, GripVertical, Grid2X2, Link, List, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 
 function SlideGrid({
   title,
@@ -20,6 +20,7 @@ function SlideGrid({
   onBulkRestore,
   onBulkDelete,
   onReorder,
+  viewMode,
   mode,
 }) {
   const allSelected = slides.length > 0 && selectedIds.length === slides.length;
@@ -120,6 +121,105 @@ function SlideGrid({
             {emptyMessage}
           </CardContent>
         </Card>
+      ) : viewMode === "list" ? (
+        <div className="space-y-3">
+          {slides.map((slide, index) => (
+            <Card
+              key={slide.id}
+              draggable={isDraggable}
+              onDragStart={(event) => handleDragStart(event, slide.id)}
+              onDragOver={handleDragOver}
+              onDrop={(event) => handleDrop(event, slide.id)}
+              className={`overflow-hidden ${isDraggable ? "cursor-grab active:cursor-grabbing" : ""} ${selectedIds.includes(slide.id) ? "ring-2 ring-amber-500" : ""}`}
+            >
+              <CardContent className="flex flex-col gap-3 p-3 md:flex-row md:items-center">
+                <div className="flex items-center gap-3 md:w-[44%]">
+                  <Checkbox
+                    checked={selectedIds.includes(slide.id)}
+                    onCheckedChange={(checked) => onToggleSelected(slide.id, checked === true)}
+                    aria-label={`Select ${slide.alt_text || "slide"}`}
+                  />
+                  <div className="rounded-full bg-black/70 px-2 py-1 text-xs text-white">
+                    #{index + 1}
+                  </div>
+                  <div className="flex aspect-[48/19] w-40 shrink-0 items-center justify-center rounded bg-gray-950 md:w-52">
+                    <img
+                      src={slide.image_url}
+                      alt={slide.alt_text || "Slide"}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                  {isDraggable && (
+                    <GripVertical className="hidden h-5 w-5 shrink-0 text-gray-500 md:block" aria-label="Drag to reorder" />
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-gray-900">{slide.alt_text || "No description"}</p>
+                    {slide.is_priority_announcement && <Badge className="bg-red-600">Priority</Badge>}
+                    <Badge className={mode === "visible" ? "bg-green-600" : "bg-gray-500"}>
+                      {mode === "visible" ? "Visible" : "Hidden"}
+                    </Badge>
+                  </div>
+                  {slide.link_url ? (
+                    <div className="flex items-center gap-1 truncate text-xs text-blue-600">
+                      <Link className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{slide.link_label || slide.link_url}</span>
+                      <a href={slide.link_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">No link</p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                  {isDraggable && (
+                    <div className="flex items-center gap-1 rounded border bg-white p-1 text-gray-700">
+                      <button
+                        type="button"
+                        onClick={() => moveSlide(index, -1)}
+                        disabled={index === 0}
+                        className="rounded p-1 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                        title="Move earlier"
+                        aria-label={`Move ${slide.alt_text || "slide"} earlier`}
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveSlide(index, 1)}
+                        disabled={index === slides.length - 1}
+                        className="rounded p-1 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                        title="Move later"
+                        aria-label={`Move ${slide.alt_text || "slide"} later`}
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => onEdit(slide)} className="gap-1">
+                    <Pencil className="h-3 w-3" /> Edit
+                  </Button>
+                  {mode === "visible" ? (
+                    <Button size="sm" variant="outline" onClick={() => onHide([slide.id])} className="gap-1 border-gray-300 text-gray-700 hover:bg-gray-50">
+                      <EyeOff className="h-3 w-3" /> Hide
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => onRestore([slide.id])} className="gap-1 border-green-300 text-green-700 hover:bg-green-50">
+                      <RotateCcw className="h-3 w-3" /> Restore
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => onDelete(slide.id)} className="border-red-300 text-red-600 hover:bg-red-50">
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {slides.map((slide, index) => (
@@ -236,6 +336,7 @@ export default function HeroSlideList({
 }) {
   const [selectedVisibleIds, setSelectedVisibleIds] = useState([]);
   const [selectedHiddenIds, setSelectedHiddenIds] = useState([]);
+  const [viewMode, setViewMode] = useState("grid");
 
   const visibleSlides = useMemo(
     () => slides.filter((slide) => slide.is_active !== false),
@@ -293,6 +394,24 @@ export default function HeroSlideList({
           <p className="text-sm text-gray-500">Hide slides to keep them reusable without showing them on the homepage.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex overflow-hidden rounded-md border border-gray-200 bg-white">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${viewMode === "grid" ? "bg-amber-600 text-white" : "text-gray-700 hover:bg-gray-50"}`}
+              aria-pressed={viewMode === "grid"}
+            >
+              <Grid2X2 className="h-4 w-4" /> Grid
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${viewMode === "list" ? "bg-amber-600 text-white" : "text-gray-700 hover:bg-gray-50"}`}
+              aria-pressed={viewMode === "list"}
+            >
+              <List className="h-4 w-4" /> List
+            </button>
+          </div>
           {selectedVisibleIds.length > 0 && (
             <Button
               variant="outline"
@@ -323,6 +442,7 @@ export default function HeroSlideList({
         onBulkRestore={() => restoreSlides(selectedHiddenIds)}
         onBulkDelete={deleteVisibleSelected}
         onReorder={onReorderVisible}
+        viewMode={viewMode}
         mode="visible"
       />
 
@@ -340,6 +460,7 @@ export default function HeroSlideList({
         onBulkHide={() => hideSlides(selectedVisibleIds)}
         onBulkRestore={() => restoreSlides(selectedHiddenIds)}
         onBulkDelete={deleteHiddenSelected}
+        viewMode={viewMode}
         mode="hidden"
       />
     </div>
