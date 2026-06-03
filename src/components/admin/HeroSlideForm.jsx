@@ -23,6 +23,18 @@ function getCoverRect(sourceWidth, sourceHeight, targetWidth, targetHeight) {
   };
 }
 
+function getContainRect(sourceWidth, sourceHeight, targetWidth, targetHeight) {
+  const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
+  const width = sourceWidth * scale;
+  const height = sourceHeight * scale;
+  return {
+    x: (targetWidth - width) / 2,
+    y: (targetHeight - height) / 2,
+    width,
+    height,
+  };
+}
+
 function canvasToBlob(canvas, type, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
@@ -67,7 +79,17 @@ async function prepareHeroImageForUpload(file) {
   if (!context) throw new Error("Unable to prepare this hero image.");
 
   const coverRect = getCoverRect(image.naturalWidth, image.naturalHeight, HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT);
+  context.save();
+  context.filter = "blur(28px)";
+  context.globalAlpha = 0.9;
   context.drawImage(image, coverRect.x, coverRect.y, coverRect.width, coverRect.height);
+  context.restore();
+
+  context.fillStyle = "rgba(0, 0, 0, 0.08)";
+  context.fillRect(0, 0, HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT);
+
+  const containRect = getContainRect(image.naturalWidth, image.naturalHeight, HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT);
+  context.drawImage(image, containRect.x, containRect.y, containRect.width, containRect.height);
 
   const blob = await canvasToBlob(canvas, "image/jpeg", HERO_IMAGE_QUALITY);
   return new File([blob], optimizedHeroFileName(file.name), {
@@ -207,7 +229,7 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
             {validationErrors.image_url && <p className="text-xs font-semibold text-red-600 mt-2">{validationErrors.image_url}</p>}
             {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
             <p className="mt-2 text-xs text-gray-500">
-              Uploaded hero images are automatically cropped to 1920x760 and compressed before they are saved.
+              Uploaded hero images are automatically redesigned to 1920x760 and compressed before they are saved.
             </p>
             {uploadedImages.length > 1 ? (
               <>
