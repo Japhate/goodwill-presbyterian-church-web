@@ -113,16 +113,16 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel, onImageUpload
           )}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Images<span className="ml-1 text-red-600">*</span>
+              {slide ? "Hero Image" : "Images"}<span className="ml-1 text-red-600">*</span>
             </label>
             <div className="flex gap-2 mb-2">
               <label className="cursor-pointer flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md text-sm transition-colors">
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                Upload Images
-                <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                {slide ? "Replace Image" : "Upload Images"}
+                <input type="file" accept="image/*" multiple={!slide} className="hidden" onChange={handleFileUpload} disabled={uploading} />
               </label>
               <span className="text-gray-400 self-center text-sm">
-                select one or several, or paste one URL below
+                {slide ? "choose a new image, or paste a replacement URL below" : "select one or several, or paste one URL below"}
               </span>
             </div>
             <Input

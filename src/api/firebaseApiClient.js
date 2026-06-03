@@ -69,6 +69,18 @@ async function deleteHeroImageFile(item) {
   }
 }
 
+async function deleteReplacedHeroImageFile(id, previousItem, nextItem) {
+  const previousUrl = previousItem?.image_url;
+  const nextUrl = nextItem?.image_url;
+  if (!previousUrl || previousUrl === nextUrl) return;
+  if (!isManagedStorageUrl(previousUrl, "homepage-hero-images")) return;
+
+  const otherSlides = (await collectionItems("HeroSlide")).filter((slide) => slide.id !== id);
+  if (otherSlides.some((slide) => slide.image_url === previousUrl)) return;
+
+  await deleteHeroImageFile(previousItem);
+}
+
 async function deleteStoredFile(fileUrl, folder) {
   if (!isManagedStorageUrl(fileUrl, folder)) return;
 
@@ -157,8 +169,14 @@ function firebaseEntity(entityName) {
       return { ...item, id: created.id };
     },
     update: async (id, data) => {
+      const previousSnapshot = entityName === "HeroSlide"
+        ? await getDoc(doc(firestore, entityName, id))
+        : null;
       const item = { ...data, updated_date: new Date().toISOString() };
       await updateDoc(doc(firestore, entityName, id), item);
+      if (entityName === "HeroSlide" && previousSnapshot?.exists()) {
+        await deleteReplacedHeroImageFile(id, previousSnapshot.data(), item);
+      }
       return { id, ...item };
     },
     delete: async (id) => {

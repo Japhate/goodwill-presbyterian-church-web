@@ -142,15 +142,6 @@ const BIBLE_STUDY_START_MIN = 0;
 const BIBLE_STUDY_END_HOUR = 19;   // 7:00 PM
 const BIBLE_STUDY_END_MIN = 0;
 
-function getOptimizedHeroImageUrl(imageUrl) {
-  if (!imageUrl?.startsWith("/images/hero/") || !imageUrl.endsWith(".png")) {
-    return imageUrl;
-  }
-
-  const filename = imageUrl.split("/").pop().replace(/\.png$/i, ".jpg");
-  return `/images/hero/optimized/${filename}`;
-}
-
 function isZoomBibleStudySlide(slide) {
   if (!slide) return false;
 
@@ -371,8 +362,8 @@ export default function HeroSlideshow() {
   const nextSlide = activeSlides.length > 1
     ? activeSlides[(current + 1) % activeSlides.length]
     : null;
-  const currentImageUrl = getOptimizedHeroImageUrl(currentSlide?.image_url);
-  const nextImageUrl = getOptimizedHeroImageUrl(nextSlide?.image_url);
+  const currentImageUrl = currentSlide?.image_url;
+  const nextImageUrl = nextSlide?.image_url;
 
   useEffect(() => {
     setCurrent(0);
