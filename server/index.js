@@ -21,14 +21,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
-const CANONICAL_HOST = 'www.goodwillpres.org';
+const CANONICAL_HOST = 'www.goodwillpresch1867.com';
 const SITE_DEVELOPER_EMAIL = 'nebajaphate@gmail.com';
-const LEGACY_HOSTS = new Set([
-  'goodwillpresch1867.com',
-  'www.goodwillpresch1867.com',
-  'goodwillpresch1867.org',
-  'www.goodwillpresch1867.org',
-]);
+const LEGACY_HOSTS = new Set([]);
 
 app.use((req, res, next) => {
   const host = req.hostname?.toLowerCase();
@@ -719,7 +714,7 @@ app.post('/api/send-welcome-email', async (req, res) => {
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
 
   const normalizedEmail = normalizeEmail(email);
-  const siteHost = host || 'www.goodwillpres.org';
+  const siteHost = host || CANONICAL_HOST;
   const siteProtocol = protocol || 'https';
   const unsubscribeParams = new URLSearchParams({
     email: normalizedEmail,
@@ -1119,7 +1114,7 @@ app.post('/api/send-newsletter-broadcast', async (req, res) => {
   }
 
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
-  const siteHost = host || 'www.goodwillpres.org';
+  const siteHost = host || CANONICAL_HOST;
   const siteProtocol = protocol || 'https';
   const results = [];
 
