@@ -358,7 +358,10 @@ export default function HeroSlideshow() {
 
     return baseSlides;
   }, [isBibleStudyPinnedTime, now, slides, specialServiceSlide]);
-  const currentSlide = activeSlides[current];
+  const currentSlide = activeSlides[current] || activeSlides[0];
+  const nextSlide = activeSlides.length > 1
+    ? activeSlides[(current + 1) % activeSlides.length]
+    : null;
 
   useEffect(() => {
     setCurrent(0);
@@ -392,6 +395,14 @@ export default function HeroSlideshow() {
     }, SLIDE_INTERVAL);
     return () => clearInterval(timerRef.current);
   }, [activeSlides.length]);
+
+  useEffect(() => {
+    if (!nextSlide?.image_url) return;
+
+    const image = new Image();
+    image.decoding = "async";
+    image.src = nextSlide.image_url;
+  }, [nextSlide?.image_url]);
 
   const handleNext = () => {
     setCurrent(prev => (prev + 1) % activeSlides.length);
@@ -430,43 +441,41 @@ export default function HeroSlideshow() {
       )}
 
       {/* Slides */}
-      {activeSlides.length > 0 && (
+      {currentSlide && (
         <div className="relative aspect-[48/19] w-full overflow-hidden bg-black">
-          {activeSlides.map((slide, i) => (
-            <div
-              key={i}
-              className="relative h-full w-full transition-opacity duration-700"
-              style={{ display: i === current ? 'block' : 'none' }}
-            >
-              <img
-                src={slide.image_url}
-                alt={slide.alt_text || "Slide"}
-                className="block h-full w-full object-contain"
-                draggable={false}
-              />
-              {/* Link overlay button */}
-              {(slide.link_url || isZoomBibleStudySlide(slide)) && (
-                <a
-                  href={slide.link_url || BIBLE_STUDY_ZOOM}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={
-                    slide.is_priority_announcement
-                      ? "absolute bottom-3 left-1/2 hidden -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500/95 px-6 py-3 text-base font-bold text-black shadow-lg transition-all hover:bg-amber-400 md:flex"
-                      : "absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:bottom-12 sm:px-4 sm:py-2 sm:text-sm md:bottom-16 md:gap-2 md:px-6 md:py-3 md:text-base"
-                  }
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {slide.is_priority_announcement ? (
-                    <Navigation className="w-4 h-4" />
-                  ) : (
-                    <ExternalLink className="w-4 h-4" />
-                  )}
-                  {slide.link_label || (isZoomBibleStudySlide(slide) ? "Join Zoom" : "Learn More")}
-                </a>
-              )}
-            </div>
-          ))}
+          <div className="relative h-full w-full transition-opacity duration-700">
+            <img
+              key={currentSlide.image_url}
+              src={currentSlide.image_url}
+              alt={currentSlide.alt_text || "Slide"}
+              className="block h-full w-full object-contain"
+              draggable={false}
+              decoding="async"
+              fetchPriority="high"
+              loading="eager"
+            />
+            {/* Link overlay button */}
+            {(currentSlide.link_url || isZoomBibleStudySlide(currentSlide)) && (
+              <a
+                href={currentSlide.link_url || BIBLE_STUDY_ZOOM}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={
+                  currentSlide.is_priority_announcement
+                    ? "absolute bottom-3 left-1/2 hidden -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500/95 px-6 py-3 text-base font-bold text-black shadow-lg transition-all hover:bg-amber-400 md:flex"
+                    : "absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:bottom-12 sm:px-4 sm:py-2 sm:text-sm md:bottom-16 md:gap-2 md:px-6 md:py-3 md:text-base"
+                }
+                onClick={(e) => e.stopPropagation()}
+              >
+                {currentSlide.is_priority_announcement ? (
+                  <Navigation className="w-4 h-4" />
+                ) : (
+                  <ExternalLink className="w-4 h-4" />
+                )}
+                {currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "Learn More")}
+              </a>
+            )}
+          </div>
 
           {/* Church name signature */}
           <div className="absolute right-3 top-2 z-20 text-right">
@@ -477,7 +486,7 @@ export default function HeroSlideshow() {
           </div>
 
           {/* Zoom Countdown Overlay — only on the Bible Study slide */}
-          {isZoomBibleStudySlide(activeSlides[current]) && (
+          {isZoomBibleStudySlide(currentSlide) && (
             <ZoomCountdownOverlay />
           )}
         </div>
