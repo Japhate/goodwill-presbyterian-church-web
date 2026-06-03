@@ -78,7 +78,7 @@ function SlideGrid({
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {slides.map((slide) => (
+          {slides.map((slide, index) => (
             <Card key={slide.id} className={`overflow-hidden ${selectedIds.includes(slide.id) ? "ring-2 ring-amber-500" : ""}`}>
               <div className="relative">
                 <div className="flex aspect-[48/19] w-full items-center justify-center bg-gray-950">
@@ -104,7 +104,7 @@ function SlideGrid({
                   </Badge>
                 </div>
                 <div className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white">
-                  #{slide.order ?? 0}
+                  #{index + 1}
                 </div>
               </div>
               <CardContent className="space-y-2 p-4">
