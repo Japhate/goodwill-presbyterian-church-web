@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { EyeOff, ExternalLink, GripVertical, Link, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, EyeOff, ExternalLink, GripVertical, Link, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 
 function SlideGrid({
   title,
@@ -53,12 +53,26 @@ function SlideGrid({
     onReorder(reorderedSlides);
   };
 
+  const moveSlide = (fromIndex, direction) => {
+    if (!isDraggable) return;
+    const toIndex = fromIndex + direction;
+    if (toIndex < 0 || toIndex >= slides.length) return;
+
+    const reorderedSlides = [...slides];
+    const [movedSlide] = reorderedSlides.splice(fromIndex, 1);
+    reorderedSlides.splice(toIndex, 0, movedSlide);
+    onReorder(reorderedSlides);
+  };
+
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-          <p className="text-sm text-gray-500">{slides.length} {slides.length === 1 ? "slide" : "slides"}</p>
+          <p className="text-sm text-gray-500">
+            {slides.length} {slides.length === 1 ? "slide" : "slides"}
+            {mode === "visible" && slides.length > 1 ? " - drag cards or use arrows to reorder" : ""}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {slides.length > 0 && (
@@ -144,8 +158,30 @@ function SlideGrid({
                   #{index + 1}
                 </div>
                 {isDraggable && (
-                  <div className="absolute bottom-2 right-2 rounded bg-white/95 p-2 text-gray-700 shadow-sm" title="Drag to reorder">
-                    <GripVertical className="h-4 w-4" />
+                  <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded bg-white/95 p-1 text-gray-700 shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => moveSlide(index, -1)}
+                      disabled={index === 0}
+                      className="rounded p-1 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Move earlier"
+                      aria-label={`Move ${slide.alt_text || "slide"} earlier`}
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </button>
+                    <div className="p-1" title="Drag to reorder">
+                      <GripVertical className="h-4 w-4" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => moveSlide(index, 1)}
+                      disabled={index === slides.length - 1}
+                      className="rounded p-1 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Move later"
+                      aria-label={`Move ${slide.alt_text || "slide"} later`}
+                    >
+                      <ArrowDown className="h-4 w-4" />
+                    </button>
                   </div>
                 )}
               </div>
