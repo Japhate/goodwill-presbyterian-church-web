@@ -1639,6 +1639,9 @@ export default function AdminPage() {
   });
 
   const otherAdminProfiles = adminProfiles.filter((profile) => profile.id !== currentAdmin?.id);
+  const nextHeroSlideOrder = heroSlides
+    .filter((slide) => slide.is_active !== false)
+    .reduce((maxOrder, slide) => Math.max(maxOrder, Number(slide.order) || 0), 0) + 1;
 
 
   const renderContent = () => {
@@ -1656,6 +1659,7 @@ export default function AdminPage() {
       case 'heroSlide':
         return <HeroSlideForm
           slide={editingItem}
+          defaultOrder={nextHeroSlideOrder}
           onSubmit={handleFormSubmit}
           onCancel={handleCancelForm}
           onImageUpload={(upload) => logAdminActivity({
