@@ -42,6 +42,20 @@ import { Input } from '@/components/ui/input';
 const ADMIN_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 const AUTO_LOGOUT_NOTICE_KEY = 'goodwill-admin-auto-logout';
 const AUTO_LOGOUT_MESSAGE = 'You were logged out automatically due to inactivity.';
+const ADMIN_VIEW_STORAGE_KEY = 'goodwill-admin-current-view';
+const ADMIN_VIEWS = new Set([
+  'announcements',
+  'worshipEvents',
+  'pastEvents',
+  'sermons',
+  'bulletins',
+  'banners',
+  'hiddenAnnouncements',
+  'heroSlides',
+  'sitePopups',
+  'newsletter',
+  'developer',
+]);
 const ACTIVITY_EVENTS = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'];
 const ADMIN_PRIVACY_NOTICE_VERSION = '2026-05-31';
 const SITE_DEVELOPER_EMAIL = 'nebajaphate@gmail.com';
@@ -186,6 +200,12 @@ function consumeAutoLogoutNotice() {
   return AUTO_LOGOUT_MESSAGE;
 }
 
+function getInitialAdminView() {
+  if (typeof window === 'undefined') return 'announcements';
+  const storedView = window.localStorage.getItem(ADMIN_VIEW_STORAGE_KEY);
+  return ADMIN_VIEWS.has(storedView) ? storedView : 'announcements';
+}
+
 export default function AdminPage() {
   const [announcements, setAnnouncements] = useState([]);
   const [worshipEvents, setWorshipEvents] = useState([]);
@@ -201,7 +221,7 @@ export default function AdminPage() {
   const [siteAdminComparison, setSiteAdminComparison] = useState([]);
   const [loadingDeveloperLogs, setLoadingDeveloperLogs] = useState(false);
   const [loadingSiteAdmins, setLoadingSiteAdmins] = useState(false);
-  const [view, setView] = useState('announcements'); // 'announcements', 'worshipEvents', 'pastEvents', 'sermons', 'bulletins', 'banners', 'hiddenAnnouncements', 'heroSlides', 'sitePopups', 'newsletter', 'developer'
+  const [view, setView] = useState(getInitialAdminView); // 'announcements', 'worshipEvents', 'pastEvents', 'sermons', 'bulletins', 'banners', 'hiddenAnnouncements', 'heroSlides', 'sitePopups', 'newsletter', 'developer'
   const [formView, setFormView] = useState(null); // 'announcement', 'worshipEvent', 'sermon', 'bulletin', 'banner', 'heroSlide', 'sitePopup', or null
   const [editingItem, setEditingItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -428,6 +448,20 @@ export default function AdminPage() {
   useEffect(() => {
     checkUserAndLoadData();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (ADMIN_VIEWS.has(view)) {
+      window.localStorage.setItem(ADMIN_VIEW_STORAGE_KEY, view);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    if (view === 'developer' && currentAdmin && !canViewDeveloperPanel) {
+      setView('announcements');
+      setFormView(null);
+    }
+  }, [view, currentAdmin, canViewDeveloperPanel]);
 
   useEffect(() => {
     if (!firebaseEnabled || !isAdmin) return undefined;
