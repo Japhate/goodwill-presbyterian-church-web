@@ -264,7 +264,7 @@ function ZoomCountdownOverlay() {
 }
 
 export default function HeroSlideshow() {
-  const [slides, setSlides] = useState(FALLBACK_SLIDES);
+  const [slides, setSlides] = useState([]);
   const [managedBanners, setManagedBanners] = useState(null);
   const [current, setCurrent] = useState(0);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
