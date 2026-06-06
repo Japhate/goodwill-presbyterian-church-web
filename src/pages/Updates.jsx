@@ -327,9 +327,9 @@ export default function Updates() {
       <div className="pt-24 md:pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-          <section id="announcements-events" className="py-6 scroll-mt-[140px] md:scroll-mt-[124px]">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4 text-center">Announcements & Current Events</h2>
-            <p className="text-center text-gray-600 mb-8 max-w-2xl mx-auto">
+          <section id="announcements-events" className="py-2 scroll-mt-[140px] md:scroll-mt-[124px]">
+            <h2 className="mb-1 text-center text-2xl font-bold text-gray-900 md:text-3xl">Announcements & Events</h2>
+            <p className="mx-auto mb-3 max-w-2xl text-center text-sm text-gray-600">
               What's happening at Goodwill? Here are the latest updates for our church family and community.
             </p>
 
@@ -357,22 +357,32 @@ export default function Updates() {
               </div>
             )}
 
-            <div className="flex flex-wrap justify-center gap-2 mb-10">
-              <button
-                onClick={() => handleCategoryChange('all')}
-                className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeCategory === 'all' ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-              >
-                All
-              </button>
-              {Object.entries(categories).map(([key, value]) => (
+            <div className="mb-5 flex justify-center">
+              <div className="flex max-w-full flex-wrap items-center justify-center gap-1 rounded-lg bg-gray-200 p-1">
+                <button
+                  onClick={() => handleCategoryChange('all')}
+                  className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors ${
+                    activeCategory === 'all'
+                      ? 'bg-white text-amber-700 shadow'
+                      : 'text-gray-600 hover:bg-white/70 hover:text-gray-800'
+                  }`}
+                >
+                  All
+                </button>
+                {Object.entries(categories).map(([key, value]) => (
                 <button
                   key={key}
                   onClick={() => handleCategoryChange(key)}
-                  className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeCategory === key ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                  className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors ${
+                    activeCategory === key
+                      ? 'bg-white text-amber-700 shadow'
+                      : 'text-gray-600 hover:bg-white/70 hover:text-gray-800'
+                  }`}
                 >
                   {value}
                 </button>
               ))}
+              </div>
             </div>
 
 
@@ -399,10 +409,12 @@ export default function Updates() {
                     ) : null}
                     <div className="p-6 flex flex-col flex-grow">
                       <div className="flex-grow">
-                        <div className="flex justify-between items-start mb-2">
-                          <Badge variant="outline" className="border-amber-500 text-amber-600">{categories[item.category] || 'Church-Wide'}</Badge>
+                        <div className="mb-2 flex items-start justify-between gap-2">
+                          <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
+                          <Badge variant="outline" className="shrink-0 border-amber-500 px-2 py-0.5 text-[10px] font-semibold leading-tight text-amber-600">
+                            {categories[item.category] || 'Church-Wide'}
+                          </Badge>
                         </div>
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">{item.title}</h3>
                         <div className="text-gray-600 prose prose-sm max-w-none">
                           <ReactMarkdown
                             components={{
