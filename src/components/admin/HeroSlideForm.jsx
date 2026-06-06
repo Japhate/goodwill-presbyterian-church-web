@@ -130,7 +130,19 @@ async function prepareHeroImageForUpload(file) {
   });
 }
 
-export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCancel, onImageUpload }) {
+function getInitialAnnouncementDraft(announcement) {
+  if (!announcement) return DEFAULT_RELATED_ANNOUNCEMENT;
+  return {
+    ...DEFAULT_RELATED_ANNOUNCEMENT,
+    ...announcement,
+    date: announcement.date ? new Date(announcement.date).toISOString().split("T")[0] : "",
+    end_date: announcement.end_date ? new Date(announcement.end_date).toISOString().split("T")[0] : "",
+  };
+}
+
+export default function HeroSlideForm({ slide, announcement, announcementMode = false, defaultOrder = 0, onSubmit, onCancel, onImageUpload }) {
+  const isAnnouncementWorkflow = announcementMode || Boolean(announcement && !slide);
+  const isLinkedPairEdit = Boolean(slide?.id && announcement?.id);
   const [formData, setFormData] = useState({
     image_url: "",
     alt_text: "",
@@ -156,7 +168,7 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
   const [uploadError, setUploadError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
   const [announcementOptions, setAnnouncementOptions] = useState([]);
-  const [relatedAnnouncementDraft, setRelatedAnnouncementDraft] = useState(DEFAULT_RELATED_ANNOUNCEMENT);
+  const [relatedAnnouncementDraft, setRelatedAnnouncementDraft] = useState(getInitialAnnouncementDraft(announcement));
   const [relatedFileUploading, setRelatedFileUploading] = useState(false);
 
   useEffect(() => {
@@ -262,12 +274,19 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
     const order = Number(formData.order);
     const nextErrors = {};
 
-    if (!String(formData.image_url || "").trim()) nextErrors.image_url = "Upload an image or paste an image URL.";
+    const hasHeroImage = String(formData.image_url || "").trim() !== "";
+    const hasRelatedAnnouncement = hasRelatedAnnouncementDraftStarted(relatedAnnouncementDraft);
+    if (!hasHeroImage && !hasRelatedAnnouncement) {
+      nextErrors.image_url = "Add a hero image, announcement details, or both.";
+      nextErrors.related_title = "Enter announcement details if this should be an announcement only.";
+    }
+    if (isAnnouncementWorkflow && !hasRelatedAnnouncement) {
+      nextErrors.related_title = "Enter the announcement title.";
+    }
     if (formData.is_priority_announcement) {
       if (!formData.priority_start) nextErrors.priority_start = "Choose when this priority slide starts.";
       if (!formData.priority_end) nextErrors.priority_end = "Choose when this priority slide ends.";
     }
-    const hasRelatedAnnouncement = hasRelatedAnnouncementDraftStarted(relatedAnnouncementDraft);
     if (hasRelatedAnnouncement) {
       if (!String(relatedAnnouncementDraft.title || "").trim()) nextErrors.related_title = "Enter the related announcement title.";
       if (!String(relatedAnnouncementDraft.content || "").trim()) nextErrors.related_content = "Enter the related announcement details.";
@@ -279,6 +298,32 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
       ? { ...relatedAnnouncementDraft, create: true }
       : null;
     const slideData = hasRelatedAnnouncement ? { ...formData, announcement_id: "" } : formData;
+    const announcementData = {
+      ...relatedAnnouncementDraft,
+      title: String(relatedAnnouncementDraft.title || "").trim(),
+      content: String(relatedAnnouncementDraft.content || "").trim(),
+    };
+
+    if ((isAnnouncementWorkflow || isLinkedPairEdit) && hasHeroImage) {
+      onSubmit({
+        __hero_with_announcement: true,
+        announcement: announcementData,
+        slide: {
+          ...slideData,
+          order,
+          announcement_id: announcement?.id || slideData.announcement_id || "",
+        },
+      });
+      return;
+    }
+
+    if (!hasHeroImage) {
+      onSubmit({
+        __announcement_only: true,
+        announcement: announcementData,
+      });
+      return;
+    }
 
     if (uploadedImages.length > 1) {
       onSubmit(uploadedImages.map((imageUrl, index) => ({
@@ -294,9 +339,11 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
   };
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card className="max-w-6xl mx-auto">
       <CardHeader>
-        <CardTitle>{slide ? "Edit Slide" : "Add New Slide"}</CardTitle>
+        <CardTitle>
+          {slide ? "Edit Hero Slide & Announcement" : isAnnouncementWorkflow ? "Create or Edit Announcement" : "Create Hero Slide & Announcement"}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -305,13 +352,15 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
               Please complete the highlighted required fields before saving this slide.
             </p>
           )}
-          <div className="border-b border-gray-200 pb-2">
-            <h3 className="text-lg font-bold text-gray-900">Hero Slide</h3>
-            <p className="text-sm text-gray-600">This top section controls the homepage slideshow image and its button.</p>
-          </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-4 rounded-md border border-gray-200 bg-white p-4">
+              <div className="border-b border-gray-200 pb-2">
+                <h3 className="text-lg font-bold text-gray-900">Hero Slide</h3>
+                <p className="text-sm text-gray-600">Create or edit the selected hero slide. Leave this side blank when creating an announcement only.</p>
+              </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              {slide ? "Hero Image" : "Images"}<span className="ml-1 text-red-600">*</span>
+              {slide ? "Hero Image" : "Images"}
             </label>
             <div className="flex gap-2 mb-2">
               <label className="cursor-pointer flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md text-sm transition-colors">
@@ -388,11 +437,86 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
             <p className="text-xs text-gray-500 mt-1">When set, this button opens the link in a new tab.</p>
           </div>
 
-          <div className="border-b border-gray-200 pb-2 pt-2">
-            <h3 className="text-lg font-bold text-gray-900">Announcements & Events</h3>
-            <p className="text-sm text-gray-600">Connect this slide to an existing announcement, create a new one, or leave this part blank.</p>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Display Order</label>
+            <Input
+              type="number"
+              value={formData.order}
+              onChange={(e) => handleChange("order", e.target.value)}
+              placeholder="0"
+              className="w-28"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {uploadedImages.length > 1
+                ? `Lower numbers appear first. This batch will use orders ${Number(formData.order)} through ${Number(formData.order) + uploadedImages.length - 1}.`
+                : "Lower numbers appear first."}
+            </p>
           </div>
 
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={formData.is_active}
+              onCheckedChange={(val) => handleChange("is_active", val)}
+            />
+            <label className="text-sm font-semibold text-gray-700">Active (show on homepage)</label>
+          </div>
+
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={formData.is_zoom_bible_study}
+                onCheckedChange={handleZoomSlideChange}
+              />
+              <label className="text-sm font-semibold text-gray-700">Zoom Bible Study slide</label>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              Enables the Join Zoom button and the countdown to the next Wednesday Bible Study meeting.
+            </p>
+          </div>
+
+          <div className="rounded-md border border-red-200 bg-red-50 p-3">
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={formData.is_priority_announcement === true}
+                onCheckedChange={(val) => handleChange("is_priority_announcement", val)}
+              />
+              <label className="text-sm font-semibold text-gray-700">Priority announcement slide</label>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              When active during the scheduled window, this slide is shown by itself and the homepage slideshow does not rotate.
+            </p>
+            {formData.is_priority_announcement && (
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Starts<span className="ml-1 text-red-600">*</span></label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.priority_start || ""}
+                    onChange={(e) => handleChange("priority_start", e.target.value)}
+                    className={validationErrors.priority_start ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  />
+                  {validationErrors.priority_start && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.priority_start}</p>}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Ends<span className="ml-1 text-red-600">*</span></label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.priority_end || ""}
+                    onChange={(e) => handleChange("priority_end", e.target.value)}
+                    className={validationErrors.priority_end ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  />
+                  {validationErrors.priority_end && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.priority_end}</p>}
+                </div>
+              </div>
+            )}
+          </div>
+            </div>
+
+            <div className="space-y-4 rounded-md border border-amber-200 bg-amber-50 p-4">
+              <div className="border-b border-amber-200 pb-2">
+                <h3 className="text-lg font-bold text-gray-900">Announcements & Events</h3>
+                <p className="text-sm text-gray-600">Create or edit the full announcement. Leave this side blank when the hero slide should not link to an announcement.</p>
+              </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Related Announcement (optional)</label>
             <select
@@ -412,10 +536,10 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
             </p>
           </div>
 
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+          <div>
             <h3 className="text-sm font-bold text-gray-900">New Announcement Details</h3>
             <p className="mt-2 text-xs text-gray-600">
-              Optional. Leave these fields blank to save only the hero slide. Fill them in to create a full announcement on the Updates page and link this slide to it automatically.
+              Fill these fields to create or update the full announcement. If a hero image is also present, the two items are linked automatically.
             </p>
             <div className="mt-4 space-y-3">
                 <div>
@@ -533,79 +657,7 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
                 </div>
             </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Display Order</label>
-            <Input
-              type="number"
-              value={formData.order}
-              onChange={(e) => handleChange("order", e.target.value)}
-              placeholder="0"
-              className="w-28"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {uploadedImages.length > 1
-                ? `Lower numbers appear first. This batch will use orders ${Number(formData.order)} through ${Number(formData.order) + uploadedImages.length - 1}.`
-                : "Lower numbers appear first."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Switch
-              checked={formData.is_active}
-              onCheckedChange={(val) => handleChange("is_active", val)}
-            />
-            <label className="text-sm font-semibold text-gray-700">Active (show on homepage)</label>
-          </div>
-
-          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={formData.is_zoom_bible_study}
-                onCheckedChange={handleZoomSlideChange}
-              />
-              <label className="text-sm font-semibold text-gray-700">Zoom Bible Study slide</label>
             </div>
-            <p className="text-xs text-gray-600 mt-2">
-              Enables the Join Zoom button and the countdown to the next Wednesday Bible Study meeting.
-            </p>
-          </div>
-
-          <div className="rounded-md border border-red-200 bg-red-50 p-3">
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={formData.is_priority_announcement === true}
-                onCheckedChange={(val) => handleChange("is_priority_announcement", val)}
-              />
-              <label className="text-sm font-semibold text-gray-700">Priority announcement slide</label>
-            </div>
-            <p className="text-xs text-gray-600 mt-2">
-              When active during the scheduled window, this slide is shown by itself and the homepage slideshow does not rotate.
-            </p>
-            {formData.is_priority_announcement && (
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Starts<span className="ml-1 text-red-600">*</span></label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.priority_start || ""}
-                    onChange={(e) => handleChange("priority_start", e.target.value)}
-                    className={validationErrors.priority_start ? "border-red-500 focus-visible:ring-red-500" : ""}
-                  />
-                  {validationErrors.priority_start && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.priority_start}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Ends<span className="ml-1 text-red-600">*</span></label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.priority_end || ""}
-                    onChange={(e) => handleChange("priority_end", e.target.value)}
-                    className={validationErrors.priority_end ? "border-red-500 focus-visible:ring-red-500" : ""}
-                  />
-                  {validationErrors.priority_end && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.priority_end}</p>}
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="flex gap-3 pt-2">

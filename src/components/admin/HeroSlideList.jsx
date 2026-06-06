@@ -337,6 +337,14 @@ export default function HeroSlideList({
   onHideSelected,
   onRestoreSelected,
   onReorderVisible,
+  title = "Hero Slideshow Slides",
+  description = "Manage homepage slideshow images, ordering, visibility, and linked announcement buttons.",
+  visibleTitle = "Visible Slides",
+  hiddenTitle = "Hidden Slides",
+  addButtonLabel = "Add Slide",
+  showVisible = true,
+  showHidden = true,
+  showHeader = true,
 }) {
   const [selectedVisibleIds, setSelectedVisibleIds] = useState([]);
   const [selectedHiddenIds, setSelectedHiddenIds] = useState([]);
@@ -391,81 +399,87 @@ export default function HeroSlideList({
 
   return (
     <div className="space-y-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Hero Slideshow Images</h2>
-          <p className="text-sm text-gray-500">Hide slides to keep them reusable without showing them on the homepage.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex overflow-hidden rounded-md border border-gray-200 bg-white">
-            <button
-              type="button"
-              onClick={() => setViewMode("grid")}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${viewMode === "grid" ? "bg-amber-600 text-white" : "text-gray-700 hover:bg-gray-50"}`}
-              aria-pressed={viewMode === "grid"}
-            >
-              <Grid2X2 className="h-4 w-4" /> Grid
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("list")}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${viewMode === "list" ? "bg-amber-600 text-white" : "text-gray-700 hover:bg-gray-50"}`}
-              aria-pressed={viewMode === "list"}
-            >
-              <List className="h-4 w-4" /> List
-            </button>
+      {showHeader && (
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+            <p className="text-sm text-gray-500">{description}</p>
           </div>
-          {selectedVisibleIds.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={hideVisibleSelected}
-              className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              <EyeOff className="h-4 w-4" /> Move Selected to Hidden ({selectedVisibleIds.length})
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="inline-flex overflow-hidden rounded-md border border-gray-200 bg-white">
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${viewMode === "grid" ? "bg-amber-600 text-white" : "text-gray-700 hover:bg-gray-50"}`}
+                aria-pressed={viewMode === "grid"}
+              >
+                <Grid2X2 className="h-4 w-4" /> Grid
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${viewMode === "list" ? "bg-amber-600 text-white" : "text-gray-700 hover:bg-gray-50"}`}
+                aria-pressed={viewMode === "list"}
+              >
+                <List className="h-4 w-4" /> List
+              </button>
+            </div>
+            {selectedVisibleIds.length > 0 && showVisible && (
+              <Button
+                variant="outline"
+                onClick={hideVisibleSelected}
+                className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                <EyeOff className="h-4 w-4" /> Move Selected to Hidden ({selectedVisibleIds.length})
+              </Button>
+            )}
+            <Button onClick={onAddNew} className="gap-2 bg-amber-600 hover:bg-amber-700">
+              <Plus className="h-4 w-4" /> {addButtonLabel}
             </Button>
-          )}
-          <Button onClick={onAddNew} className="gap-2 bg-amber-600 hover:bg-amber-700">
-            <Plus className="h-4 w-4" /> Add Slide
-          </Button>
+          </div>
         </div>
-      </div>
+      )}
 
-      <SlideGrid
-        title="Visible Images"
-        emptyMessage="No visible slides. Restore a hidden slide or add a new one."
-        slides={visibleSlides}
-        selectedIds={selectedVisibleIds}
-        onToggleSelected={toggleVisibleSelected}
-        onToggleAll={(checked) => setSelectedVisibleIds(checked ? visibleSlides.map((slide) => slide.id) : [])}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onHide={hideSlides}
-        onRestore={restoreSlides}
-        onBulkHide={() => hideSlides(selectedVisibleIds)}
-        onBulkRestore={() => restoreSlides(selectedHiddenIds)}
-        onBulkDelete={hideVisibleSelected}
-        onReorder={onReorderVisible}
-        viewMode={viewMode}
-        mode="visible"
-      />
+      {showVisible && (
+        <SlideGrid
+          title={visibleTitle}
+          emptyMessage="No visible slides. Restore a hidden slide or add a new one."
+          slides={visibleSlides}
+          selectedIds={selectedVisibleIds}
+          onToggleSelected={toggleVisibleSelected}
+          onToggleAll={(checked) => setSelectedVisibleIds(checked ? visibleSlides.map((slide) => slide.id) : [])}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onHide={hideSlides}
+          onRestore={restoreSlides}
+          onBulkHide={() => hideSlides(selectedVisibleIds)}
+          onBulkRestore={() => restoreSlides(selectedHiddenIds)}
+          onBulkDelete={hideVisibleSelected}
+          onReorder={onReorderVisible}
+          viewMode={viewMode}
+          mode="visible"
+        />
+      )}
 
-      <SlideGrid
-        title="Hidden Images"
-        emptyMessage="No hidden hero images."
-        slides={hiddenSlides}
-        selectedIds={selectedHiddenIds}
-        onToggleSelected={toggleHiddenSelected}
-        onToggleAll={(checked) => setSelectedHiddenIds(checked ? hiddenSlides.map((slide) => slide.id) : [])}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onHide={hideSlides}
-        onRestore={restoreSlides}
-        onBulkHide={() => hideSlides(selectedVisibleIds)}
-        onBulkRestore={() => restoreSlides(selectedHiddenIds)}
-        onBulkDelete={deleteHiddenSelected}
-        viewMode={viewMode}
-        mode="hidden"
-      />
+      {showHidden && (
+        <SlideGrid
+          title={hiddenTitle}
+          emptyMessage="No hidden hero slides."
+          slides={hiddenSlides}
+          selectedIds={selectedHiddenIds}
+          onToggleSelected={toggleHiddenSelected}
+          onToggleAll={(checked) => setSelectedHiddenIds(checked ? hiddenSlides.map((slide) => slide.id) : [])}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onHide={hideSlides}
+          onRestore={restoreSlides}
+          onBulkHide={() => hideSlides(selectedVisibleIds)}
+          onBulkRestore={() => restoreSlides(selectedHiddenIds)}
+          onBulkDelete={deleteHiddenSelected}
+          viewMode={viewMode}
+          mode="hidden"
+        />
+      )}
     </div>
   );
 }

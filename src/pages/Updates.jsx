@@ -505,7 +505,18 @@ export default function Updates() {
                         </div>
                       </div>
                       <div className="mt-4 space-y-2 border-t pt-4 text-sm text-gray-500">
-                        {dateLabel && <div className="flex items-start gap-2"><Calendar className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Date:</strong> {dateLabel}</span></div>}
+                        {dateLabel && (
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <Calendar className="h-4 w-4 flex-shrink-0" />
+                            <span><strong className="font-semibold">Date:</strong> {dateLabel}</span>
+                            {calendarUrl && (
+                              <a href={calendarUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded text-xs font-semibold text-amber-700 underline-offset-2 hover:underline">
+                                <Calendar className="h-3 w-3" />
+                                Add to calendar
+                              </a>
+                            )}
+                          </div>
+                        )}
                         {timeLabel && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Time:</strong> {timeLabel}</span></div>}
                         {item.frequency && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Frequency:</strong> {item.frequency}</span></div>}
                         {locationType === "virtual" ? (
@@ -513,14 +524,8 @@ export default function Updates() {
                         ) : (
                           item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>
                         )}
-                        {(calendarUrl || item.zoom_link || item.directions_url || item.file_upload) && (
+                        {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="flex flex-wrap gap-2 pt-2">
-                            {calendarUrl && (
-                              <a href={calendarUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-300 hover:bg-amber-50">
-                                <Calendar className="h-3.5 w-3.5" />
-                                Add to Calendar
-                              </a>
-                            )}
                             {locationType === "virtual" && item.zoom_link && (
                               <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
@@ -657,7 +662,12 @@ export default function Updates() {
                         </div>
                       )}
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">{item.title}</h3>
+                        <div className="mb-2 flex items-start justify-between gap-2">
+                          <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
+                          <Badge variant="outline" className="shrink-0 border-amber-500 px-2 py-0.5 text-[10px] font-semibold leading-tight text-amber-600">
+                            {categories[item.category] || 'Church-Wide'}
+                          </Badge>
+                        </div>
                         {item.content && (
                           <div className="text-gray-600 text-sm mb-3 prose prose-sm max-w-none">
                             <ReactMarkdown
@@ -670,7 +680,18 @@ export default function Updates() {
                           </div>
                         )}
                         <div className="space-y-2 text-sm text-gray-500">
-                          {dateLabel && <div className="flex items-start gap-2"><Calendar className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Date:</strong> {dateLabel}</span></div>}
+                          {dateLabel && (
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <Calendar className="h-4 w-4 flex-shrink-0" />
+                              <span><strong className="font-semibold">Date:</strong> {dateLabel}</span>
+                              {calendarUrl && (
+                                <a href={calendarUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded text-xs font-semibold text-amber-700 underline-offset-2 hover:underline">
+                                  <Calendar className="h-3 w-3" />
+                                  Add to calendar
+                                </a>
+                              )}
+                            </div>
+                          )}
                           {timeLabel && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Time:</strong> {timeLabel}</span></div>}
                           {item.frequency && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Frequency:</strong> {item.frequency}</span></div>}
                           {locationType === "virtual" ? (
@@ -679,14 +700,8 @@ export default function Updates() {
                             item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>
                           )}
                         </div>
-                        {(calendarUrl || item.zoom_link || item.directions_url || item.file_upload) && (
+                        {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="mt-4 flex flex-wrap gap-2">
-                            {calendarUrl && (
-                              <a href={calendarUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-300 hover:bg-amber-50">
-                                <Calendar className="h-3.5 w-3.5" />
-                                Add to Calendar
-                              </a>
-                            )}
                             {locationType === "virtual" && item.zoom_link && (
                               <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
                                 <ExternalLink className="h-3.5 w-3.5" />

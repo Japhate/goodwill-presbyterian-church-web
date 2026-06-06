@@ -1105,6 +1105,39 @@ export default function AdminPage() {
     return true;
   };
 
+  const handleSetAnnouncementVisibility = async (id, status) => {
+    const announcement = announcements.find((item) => String(item.id) === String(id));
+    if (!announcement) return false;
+
+    const isRestoring = status !== 'Hidden';
+    const confirmMessage = isRestoring
+      ? 'Restore this announcement or event so it appears on the Updates page?'
+      : 'Move this announcement or event to the hidden section? It will stay saved for reuse.';
+
+    if (!window.confirm(confirmMessage)) {
+      return false;
+    }
+
+    try {
+      const { id: _id, ...announcementData } = announcement;
+      await AnnouncementsEvents.update(id, { ...announcementData, status });
+      await logAdminActivity({
+        action: isRestoring ? 'restored' : 'hidden',
+        section: 'Hero Slides & Announcements',
+        itemType: 'announcement',
+        itemId: id,
+        itemLabel: announcement.title || '',
+        details: { status },
+      });
+      await loadAnnouncements();
+      return true;
+    } catch (error) {
+      console.error('Unable to update announcement visibility:', error);
+      window.alert('Unable to update this announcement or event. Please try again.');
+      return false;
+    }
+  };
+
   const handleReorderVisibleHeroSlides = async (orderedVisibleSlides) => {
     const hiddenSlides = heroSlides.filter((slide) => slide.is_active === false);
     const reorderedVisibleSlides = orderedVisibleSlides.map((slide, index) => ({
@@ -1223,6 +1256,40 @@ export default function AdminPage() {
     let savedItemCount = Array.isArray(formData) ? formData.length : 1;
 
     try {
+        const stripEntityId = ({ id: _id, ...data } = {}) => data;
+        const saveHeroAnnouncementPair = async (payload) => {
+            const announcementData = stripEntityId(payload.announcement || {});
+            let announcementId = payload.announcement?.id || payload.slide?.announcement_id || '';
+
+            if (!announcementId && formView === 'announcement' && isEditing) {
+                announcementId = editingItem.id;
+            }
+
+            if (announcementId) {
+                await AnnouncementsEvents.update(announcementId, announcementData);
+            } else {
+                const createdAnnouncement = await AnnouncementsEvents.create(announcementData);
+                announcementId = createdAnnouncement?.id || '';
+            }
+
+            if (payload.slide?.image_url) {
+                const slideData = stripEntityId(payload.slide);
+                const slideId = payload.slide?.id || (formView === 'heroSlide' && isEditing ? editingItem.id : '');
+                const preparedSlideData = {
+                    ...slideData,
+                    announcement_id: announcementId,
+                };
+
+                if (slideId) {
+                    await HeroSlide.update(slideId, preparedSlideData);
+                } else {
+                    await HeroSlide.create(preparedSlideData);
+                }
+            }
+
+            return announcementId;
+        };
+
         const prepareHeroSlideData = async (submittedData) => {
             const slides = Array.isArray(submittedData) ? submittedData : [submittedData];
             const draftSource = slides.find((slide) => slide.related_announcement_draft?.create);
@@ -1263,6 +1330,20 @@ export default function AdminPage() {
 
         switch (formView) {
             case 'announcement':
+                if (formData.__announcement_only) {
+                    const announcementData = formData.announcement || {};
+                    if (isEditing) {
+                        await AnnouncementsEvents.update(editingItem.id, announcementData);
+                    } else {
+                        const created = await AnnouncementsEvents.create(announcementData);
+                        savedItemId = created?.id || '';
+                    }
+                    break;
+                }
+                if (formData.__hero_with_announcement) {
+                    savedItemId = await saveHeroAnnouncementPair(formData);
+                    break;
+                }
                 if (isEditing) {
                     await AnnouncementsEvents.update(editingItem.id, formData);
                 } else {
@@ -1320,6 +1401,15 @@ export default function AdminPage() {
                 break;
             case 'heroSlide':
                 {
+                if (formData.__announcement_only) {
+                    const created = await AnnouncementsEvents.create(formData.announcement || {});
+                    savedItemId = created?.id || '';
+                    break;
+                }
+                if (formData.__hero_with_announcement) {
+                    savedItemId = await saveHeroAnnouncementPair(formData);
+                    break;
+                }
                 const preparedHeroData = await prepareHeroSlideData(formData);
                 if (isEditing && Array.isArray(preparedHeroData)) {
                     const [firstSlide, ...additionalSlides] = preparedHeroData;
@@ -1681,12 +1771,39 @@ export default function AdminPage() {
   const nextHeroSlideOrder = heroSlides
     .filter((slide) => slide.is_active !== false)
     .reduce((maxOrder, slide) => Math.max(maxOrder, Number(slide.order) || 0), 0) + 1;
+  const getLinkedAnnouncementForSlide = (slide) => {
+    if (!slide?.announcement_id) return null;
+    return announcements.find((announcement) => String(announcement.id) === String(slide.announcement_id)) || null;
+  };
+  const getLinkedHeroSlideForAnnouncement = (announcement) => {
+    if (!announcement?.id) return null;
+    return heroSlides.find((slide) => String(slide.announcement_id) === String(announcement.id)) || null;
+  };
 
 
   const renderContent = () => {
     switch (formView) {
       case 'announcement':
-        return <AnnouncementForm announcement={editingItem} onSubmit={handleFormSubmit} onCancel={handleCancelForm} />;
+        return <HeroSlideForm
+          slide={getLinkedHeroSlideForAnnouncement(editingItem)}
+          announcement={editingItem}
+          announcementMode
+          defaultOrder={nextHeroSlideOrder}
+          onSubmit={handleFormSubmit}
+          onCancel={handleCancelForm}
+          onImageUpload={(upload) => logAdminActivity({
+            action: 'uploaded',
+            section: 'Hero Slides & Announcements',
+            itemType: 'hero image',
+            itemLabel: upload.filenames?.join(', ') || `${upload.count} hero image upload`,
+            details: {
+              count: upload.count,
+              filenames: upload.filenames || [],
+              original_filenames: upload.originalFilenames || [],
+              processed_dimensions: '1920x760',
+            },
+          })}
+        />;
       case 'worshipEvent':
         return <WorshipEventForm event={editingItem} onSubmit={handleFormSubmit} onCancel={handleCancelForm} />;
       case 'sermon':
@@ -1698,6 +1815,7 @@ export default function AdminPage() {
       case 'heroSlide':
         return <HeroSlideForm
           slide={editingItem}
+          announcement={getLinkedAnnouncementForSlide(editingItem)}
           defaultOrder={nextHeroSlideOrder}
           onSubmit={handleFormSubmit}
           onCancel={handleCancelForm}
@@ -1755,14 +1873,46 @@ export default function AdminPage() {
         />;
       case 'heroSlides':
         return (
-          <div className="space-y-8">
-            <section aria-labelledby="hero-slides-admin-heading" className="space-y-4">
+          <div className="space-y-10">
+            <section aria-labelledby="hero-slides-admin-heading">
+              <HeroSlideList
+                slides={heroSlides}
+                onEdit={(item) => handleEdit(item, 'heroSlide')}
+                onDelete={(id) => handleDelete(id, 'heroSlide')}
+                onDeleteSelected={handleDeleteSelectedHeroSlides}
+                onHideSelected={(ids) => handleSetHeroSlideVisibility(ids, false)}
+                onRestoreSelected={(ids) => handleSetHeroSlideVisibility(ids, true)}
+                onReorderVisible={handleReorderVisibleHeroSlides}
+                onAddNew={() => handleAddNew('heroSlide')}
+                title="Hero Slideshow Slides"
+                description="Manage the homepage slideshow images, ordering, visibility, and linked announcement buttons."
+                visibleTitle="Visible Slides"
+                showHidden={false}
+              />
+            </section>
+
+            <section aria-labelledby="announcements-events-admin-heading">
+              <AnnouncementList
+                announcements={upcomingAnnouncements}
+                onEdit={(item) => handleEdit(item, 'announcement')}
+                onDelete={(id) => handleSetAnnouncementVisibility(id, 'Hidden')}
+                onHide={(id) => handleSetAnnouncementVisibility(id, 'Hidden')}
+                onAddNew={() => handleAddNew('announcement')}
+                onDuplicate={(item) => handleDuplicate(item, 'announcement')}
+                title="Announcements & Events"
+                description="Manage announcement and event details. Add Event opens the same Hero Slide & Announcement form."
+                addLabel="Add Event"
+                showAddNew={true}
+              />
+            </section>
+
+            <section aria-labelledby="hidden-slides-announcements-heading" className="space-y-6">
               <div>
-                <h2 id="hero-slides-admin-heading" className="text-2xl font-bold text-gray-900">
-                  Hero Slides
+                <h2 id="hidden-slides-announcements-heading" className="text-2xl font-bold text-gray-900">
+                  Hidden Slides and Announcements
                 </h2>
                 <p className="mt-1 text-sm text-gray-600">
-                  Manage the homepage slideshow images, ordering, visibility, and linked announcement buttons.
+                  Deleted slides and announcements are kept here until they are restored or permanently deleted.
                 </p>
               </div>
               <HeroSlideList
@@ -1774,44 +1924,30 @@ export default function AdminPage() {
                 onRestoreSelected={(ids) => handleSetHeroSlideVisibility(ids, true)}
                 onReorderVisible={handleReorderVisibleHeroSlides}
                 onAddNew={() => handleAddNew('heroSlide')}
+                hiddenTitle="Hidden Slides"
+                showVisible={false}
+                showHeader={false}
               />
-            </section>
-
-            <section aria-labelledby="announcements-events-admin-heading" className="space-y-4">
-              <div>
-                <h2 id="announcements-events-admin-heading" className="text-2xl font-bold text-gray-900">
-                  Announcements & Events
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  Add announcements with or without hero images. Announcements created without a hero image appear only on the Updates page.
-                </p>
-              </div>
               <AnnouncementList
-                announcements={upcomingAnnouncements}
+                announcements={allHidden}
                 onEdit={(item) => handleEdit(item, 'announcement')}
                 onDelete={(id) => handleDelete(id, 'announcement')}
-                onAddNew={() => handleAddNew('announcement')}
+                onRestore={(id) => handleSetAnnouncementVisibility(id, 'Active')}
                 onDuplicate={(item) => handleDuplicate(item, 'announcement')}
-                title="Current Announcements & Events"
-                showAddNew={true}
+                title="Hidden Announcements & Events"
+                description="Restore an announcement to reuse it, or delete it permanently."
+                showAddNew={false}
+                mode="hidden"
               />
-              {allHidden.length > 0 && (
-                <AnnouncementList
-                  announcements={allHidden}
-                  onEdit={(item) => handleEdit(item, 'announcement')}
-                  onDelete={(id) => handleDelete(id, 'announcement')}
-                  onDuplicate={(item) => handleDuplicate(item, 'announcement')}
-                  title="Hidden Announcements"
-                  showAddNew={false}
-                />
-              )}
               {pastAnnouncements.length > 0 && (
                 <AnnouncementList
                   announcements={pastAnnouncements}
                   onEdit={(item) => handleEdit(item, 'announcement')}
-                  onDelete={(id) => handleDelete(id, 'announcement')}
+                  onDelete={(id) => handleSetAnnouncementVisibility(id, 'Hidden')}
+                  onHide={(id) => handleSetAnnouncementVisibility(id, 'Hidden')}
                   onDuplicate={(item) => handleDuplicate(item, 'announcement')}
                   title="Past Announcements"
+                  description="Past announcements are kept available for review and can be hidden when no longer needed."
                   showAddNew={false}
                 />
               )}
