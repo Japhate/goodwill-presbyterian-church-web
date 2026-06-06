@@ -6,13 +6,10 @@ import { localApi } from "@/api/localApiClient";
 import { Loader2, Upload } from "lucide-react";
 import ConfirmedDateTimePicker from "@/components/admin/ConfirmedDateTimePicker";
 
-const HERO_IMAGE_WIDTH = 1920;
-const HERO_IMAGE_HEIGHT = 760;
-const HERO_IMAGE_QUALITY = 0.82;
-const HERO_IMAGE_MIN_WIDTH = 1400;
-const HERO_IMAGE_MIN_HEIGHT = 550;
-const HERO_IMAGE_ASPECT_RATIO = HERO_IMAGE_WIDTH / HERO_IMAGE_HEIGHT;
-const HERO_IMAGE_ASPECT_TOLERANCE = 0.18;
+const HERO_IMAGE_MAX_WIDTH = 1920;
+const HERO_IMAGE_MAX_HEIGHT = 1080;
+const HERO_IMAGE_QUALITIES = [0.72, 0.66, 0.6, 0.54];
+const HERO_IMAGE_TARGET_BYTES = 420 * 1024;
 const DEFAULT_RELATED_ANNOUNCEMENT = {
   title: "",
   content: "",
@@ -42,15 +39,11 @@ function hasRelatedAnnouncementDraftStarted(draft) {
   });
 }
 
-function getCoverRect(sourceWidth, sourceHeight, targetWidth, targetHeight) {
-  const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
-  const width = sourceWidth * scale;
-  const height = sourceHeight * scale;
+function getScaledImageSize(sourceWidth, sourceHeight, maxWidth, maxHeight) {
+  const scale = Math.min(1, maxWidth / sourceWidth, maxHeight / sourceHeight);
   return {
-    x: (targetWidth - width) / 2,
-    y: (targetHeight - height) / 2,
-    width,
-    height,
+    width: Math.max(1, Math.round(sourceWidth * scale)),
+    height: Math.max(1, Math.round(sourceHeight * scale)),
   };
 }
 
@@ -64,6 +57,18 @@ function canvasToBlob(canvas, type, quality) {
       reject(new Error("Unable to optimize this hero image."));
     }, type, quality);
   });
+}
+
+async function canvasToOptimizedHeroBlob(canvas) {
+  let smallestBlob = null;
+
+  for (const quality of HERO_IMAGE_QUALITIES) {
+    const blob = await canvasToBlob(canvas, "image/jpeg", quality);
+    smallestBlob = !smallestBlob || blob.size < smallestBlob.size ? blob : smallestBlob;
+    if (blob.size <= HERO_IMAGE_TARGET_BYTES) return blob;
+  }
+
+  return smallestBlob;
 }
 
 function loadImageElement(file) {
@@ -85,33 +90,23 @@ function loadImageElement(file) {
 
 function optimizedHeroFileName(fileName) {
   const baseName = fileName.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9._-]/g, "-") || "hero-image";
-  return `${baseName}-1920x760.jpg`;
+  return `${baseName}-optimized.jpg`;
 }
 
 async function prepareHeroImageForUpload(file) {
   const image = await loadImageElement(file);
-  const imageRatio = image.naturalWidth / image.naturalHeight;
-  const ratioDifference = Math.abs(imageRatio - HERO_IMAGE_ASPECT_RATIO) / HERO_IMAGE_ASPECT_RATIO;
-  const isTooSmall = image.naturalWidth < HERO_IMAGE_MIN_WIDTH || image.naturalHeight < HERO_IMAGE_MIN_HEIGHT;
-  const isWrongShape = ratioDifference > HERO_IMAGE_ASPECT_TOLERANCE;
-
-  if (isTooSmall || isWrongShape) {
-    throw new Error(
-      `This image is ${image.naturalWidth}x${image.naturalHeight}. Hero images should be close to the ${HERO_IMAGE_WIDTH}x${HERO_IMAGE_HEIGHT} wide banner shape and at least ${HERO_IMAGE_MIN_WIDTH}x${HERO_IMAGE_MIN_HEIGHT} pixels. Please choose a wider, higher-resolution image.`
-    );
-  }
+  const imageSize = getScaledImageSize(image.naturalWidth, image.naturalHeight, HERO_IMAGE_MAX_WIDTH, HERO_IMAGE_MAX_HEIGHT);
 
   const canvas = document.createElement("canvas");
-  canvas.width = HERO_IMAGE_WIDTH;
-  canvas.height = HERO_IMAGE_HEIGHT;
+  canvas.width = imageSize.width;
+  canvas.height = imageSize.height;
 
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Unable to prepare this hero image.");
 
-  const coverRect = getCoverRect(image.naturalWidth, image.naturalHeight, HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT);
-  context.drawImage(image, coverRect.x, coverRect.y, coverRect.width, coverRect.height);
+  context.drawImage(image, 0, 0, imageSize.width, imageSize.height);
 
-  const blob = await canvasToBlob(canvas, "image/jpeg", HERO_IMAGE_QUALITY);
+  const blob = await canvasToOptimizedHeroBlob(canvas);
   return new File([blob], optimizedHeroFileName(file.name), {
     type: "image/jpeg",
     lastModified: Date.now(),
@@ -397,7 +392,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
             {validationErrors.image_url && <p className="text-xs font-semibold text-red-600 mt-2">{validationErrors.image_url}</p>}
             {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
             <p className="mt-2 text-xs text-gray-500">
-              Hero images should be close to a 1920x760 wide banner and at least 1400x550 pixels. Accepted images are cropped, resized to 1920x760, and compressed before they are saved.
+              Uploaded images are kept intact, converted to optimized JPG, and compressed before they are saved.
             </p>
             {uploadedImages.length > 1 ? (
               <>
