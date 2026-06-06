@@ -4,9 +4,9 @@ React and Vite frontend with Firebase-backed content management, deployed on Ren
 
 ## Local Preview
 
-Run `npm run dev`, then open `http://localhost:3001`.
+Run `npm run dev`, then open `http://localhost:3100`.
 
-The local Node server and Vite live-update preview share port `3001`, including local API requests.
+The local Node server and Vite live-update preview share port `3100`, including local API requests.
 
 ## Firebase Content Management
 

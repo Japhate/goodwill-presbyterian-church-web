@@ -5,7 +5,7 @@ const server = spawn(process.execPath, ['--watch-path=server', 'server/index.js'
   env: {
     ...process.env,
     LOCAL_VITE_DEV: 'true',
-    PORT: '3001',
+    PORT: '3100',
   },
   stdio: 'inherit',
 });
