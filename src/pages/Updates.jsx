@@ -35,8 +35,21 @@ const formatDateRange = (startDate, endDate) => {
 };
 
 const formatTimeRange = (startTime, endTime) => {
-  if (startTime && endTime) return `${startTime} - ${endTime}`;
-  return startTime || endTime || "";
+  const formatDisplayTime = (timeString) => {
+    if (!timeString) return "";
+    const [hourValue, minuteValue = "0"] = String(timeString).split(":");
+    const hour = Number(hourValue);
+    const minute = Number(minuteValue);
+    if (Number.isNaN(hour) || Number.isNaN(minute)) return timeString;
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${String(minute).padStart(2, "0")} ${suffix}`;
+  };
+
+  const startLabel = formatDisplayTime(startTime);
+  const endLabel = formatDisplayTime(endTime);
+  if (startLabel && endLabel) return `${startLabel} - ${endLabel}`;
+  return startLabel || endLabel || "";
 };
 
 const getLocationType = (item) => item.location_type || (item.virtual_platform || item.zoom_link ? "virtual" : "physical");
