@@ -35,7 +35,7 @@ import { firestore } from '@/lib/firebase';
 import { DEFAULT_HOMEPAGE_BANNERS } from '@/lib/homepageBanners';
 import { DEFAULT_EMAIL_TEMPLATES, NEWSLETTER_TEMPLATE_IDS } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
-import { Camera, Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2 } from 'lucide-react';
+import { Camera, Loader2, ShieldAlert, CalendarHeart, PlaySquare, FileText, MessageSquare, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -44,13 +44,10 @@ const AUTO_LOGOUT_NOTICE_KEY = 'goodwill-admin-auto-logout';
 const AUTO_LOGOUT_MESSAGE = 'You were logged out automatically due to inactivity.';
 const ADMIN_VIEW_STORAGE_KEY = 'goodwill-admin-current-view';
 const ADMIN_VIEWS = new Set([
-  'announcements',
   'worshipEvents',
-  'pastEvents',
   'sermons',
   'bulletins',
   'banners',
-  'hiddenAnnouncements',
   'heroSlides',
   'sitePopups',
   'newsletter',
@@ -60,12 +57,12 @@ const ACTIVITY_EVENTS = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'
 const ADMIN_PRIVACY_NOTICE_VERSION = '2026-05-31';
 const SITE_DEVELOPER_EMAIL = 'nebajaphate@gmail.com';
 const FORM_LOG_META = {
-  announcement: { section: 'Announcements & Events', itemType: 'announcement' },
+  announcement: { section: 'Hero Slides & Announcements', itemType: 'announcement' },
   worshipEvent: { section: 'Calendar of Worship', itemType: 'worship event' },
   sermon: { section: 'Sermons', itemType: 'sermon' },
   bulletin: { section: 'Worship Bulletins', itemType: 'bulletin' },
   banner: { section: 'Homepage Banner', itemType: 'homepage banner' },
-  heroSlide: { section: 'Hero Slideshow', itemType: 'hero slide' },
+  heroSlide: { section: 'Hero Slides & Announcements', itemType: 'hero slide' },
   sitePopup: { section: 'Homepage Popups', itemType: 'homepage popup' },
 };
 const ADMIN_PRIVACY_NOTICE = [
@@ -201,9 +198,9 @@ function consumeAutoLogoutNotice() {
 }
 
 function getInitialAdminView() {
-  if (typeof window === 'undefined') return 'announcements';
+  if (typeof window === 'undefined') return 'heroSlides';
   const storedView = window.localStorage.getItem(ADMIN_VIEW_STORAGE_KEY);
-  return ADMIN_VIEWS.has(storedView) ? storedView : 'announcements';
+  return ADMIN_VIEWS.has(storedView) ? storedView : 'heroSlides';
 }
 
 export default function AdminPage() {
@@ -221,7 +218,7 @@ export default function AdminPage() {
   const [siteAdminComparison, setSiteAdminComparison] = useState([]);
   const [loadingDeveloperLogs, setLoadingDeveloperLogs] = useState(false);
   const [loadingSiteAdmins, setLoadingSiteAdmins] = useState(false);
-  const [view, setView] = useState(getInitialAdminView); // 'announcements', 'worshipEvents', 'pastEvents', 'sermons', 'bulletins', 'banners', 'hiddenAnnouncements', 'heroSlides', 'sitePopups', 'newsletter', 'developer'
+  const [view, setView] = useState(getInitialAdminView); // 'worshipEvents', 'sermons', 'bulletins', 'banners', 'heroSlides', 'sitePopups', 'newsletter', 'developer'
   const [formView, setFormView] = useState(null); // 'announcement', 'worshipEvent', 'sermon', 'bulletin', 'banner', 'heroSlide', 'sitePopup', or null
   const [editingItem, setEditingItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -458,7 +455,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (view === 'developer' && currentAdmin && !canViewDeveloperPanel) {
-      setView('announcements');
+      setView('heroSlides');
       setFormView(null);
     }
   }, [view, currentAdmin, canViewDeveloperPanel]);
@@ -570,7 +567,7 @@ export default function AdminPage() {
     setAdminActivityLogs([]);
     setSiteAdminComparison([]);
     if (view === 'developer') {
-      setView('announcements');
+      setView('heroSlides');
     }
   }, [canViewDeveloperPanel, view]);
 
@@ -1058,7 +1055,7 @@ export default function AdminPage() {
 
     await logAdminActivity({
       action: 'deleted',
-      section: 'Hero Slideshow',
+      section: 'Hero Slides & Announcements',
       itemType: slideLabel,
       itemId: ids.join(', '),
       itemLabel: `${ids.length} selected ${slideLabel}`,
@@ -1098,7 +1095,7 @@ export default function AdminPage() {
 
     await logAdminActivity({
       action: isActive ? 'restored' : 'hidden',
-      section: 'Hero Slideshow',
+      section: 'Hero Slides & Announcements',
       itemType: slideLabel,
       itemId: ids.join(', '),
       itemLabel: `${ids.length} selected ${slideLabel}`,
@@ -1125,7 +1122,7 @@ export default function AdminPage() {
 
       await logAdminActivity({
         action: 'reordered',
-        section: 'Hero Slideshow',
+        section: 'Hero Slides & Announcements',
         itemType: 'hero slides',
         itemLabel: `${reorderedVisibleSlides.length} visible hero slides`,
         details: {
@@ -1209,7 +1206,7 @@ export default function AdminPage() {
         await loadBanners();
         break;
       case 'heroSlide':
-        await loadHeroSlides();
+        await Promise.all([loadHeroSlides(), loadAnnouncements()]);
         break;
       case 'sitePopup':
         await loadSitePopups();
@@ -1706,7 +1703,7 @@ export default function AdminPage() {
           onCancel={handleCancelForm}
           onImageUpload={(upload) => logAdminActivity({
             action: 'uploaded',
-            section: 'Hero Slideshow',
+            section: 'Hero Slides & Announcements',
             itemType: 'hero image',
             itemLabel: upload.filenames?.join(', ') || `${upload.count} hero image upload`,
             details: {
@@ -1724,16 +1721,6 @@ export default function AdminPage() {
     }
 
     switch (view) {
-      case 'announcements':
-        return <AnnouncementList
-          announcements={upcomingAnnouncements}
-          onEdit={(item) => handleEdit(item, 'announcement')}
-          onDelete={(id) => handleDelete(id, 'announcement')}
-          onAddNew={() => handleAddNew('announcement')}
-          onDuplicate={(item) => handleDuplicate(item, 'announcement')}
-          title="Manage Announcements & Events"
-          showAddNew={true}
-        />;
       case 'worshipEvents':
         return <WorshipEventList
           events={worshipEvents}
@@ -1741,24 +1728,6 @@ export default function AdminPage() {
           onDelete={(id) => handleDelete(id, 'worshipEvent')}
           onAddNew={() => handleAddNew('worshipEvent')}
           onDuplicate={(item) => handleDuplicate(item, 'worshipEvent')}
-        />;
-      case 'pastEvents':
-        return <AnnouncementList
-          announcements={pastAnnouncements}
-          onEdit={(item) => handleEdit(item, 'announcement')}
-          onDelete={(id) => handleDelete(id, 'announcement')}
-          onDuplicate={(item) => handleDuplicate(item, 'announcement')}
-          title="Manage Past Events Gallery"
-          showAddNew={false}
-        />;
-      case 'hiddenAnnouncements':
-        return <AnnouncementList
-          announcements={allHidden}
-          onEdit={(item) => handleEdit(item, 'announcement')}
-          onDelete={(id) => handleDelete(id, 'announcement')}
-          onDuplicate={(item) => handleDuplicate(item, 'announcement')}
-          title="Hidden Announcements"
-          showAddNew={false}
         />;
       case 'sermons':
         return <SermonList
@@ -1785,16 +1754,70 @@ export default function AdminPage() {
           onDuplicate={(item) => handleDuplicate(item, 'banner')}
         />;
       case 'heroSlides':
-        return <HeroSlideList
-          slides={heroSlides}
-          onEdit={(item) => handleEdit(item, 'heroSlide')}
-          onDelete={(id) => handleDelete(id, 'heroSlide')}
-          onDeleteSelected={handleDeleteSelectedHeroSlides}
-          onHideSelected={(ids) => handleSetHeroSlideVisibility(ids, false)}
-          onRestoreSelected={(ids) => handleSetHeroSlideVisibility(ids, true)}
-          onReorderVisible={handleReorderVisibleHeroSlides}
-          onAddNew={() => handleAddNew('heroSlide')}
-        />;
+        return (
+          <div className="space-y-8">
+            <section aria-labelledby="hero-slides-admin-heading" className="space-y-4">
+              <div>
+                <h2 id="hero-slides-admin-heading" className="text-2xl font-bold text-gray-900">
+                  Hero Slides
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Manage the homepage slideshow images, ordering, visibility, and linked announcement buttons.
+                </p>
+              </div>
+              <HeroSlideList
+                slides={heroSlides}
+                onEdit={(item) => handleEdit(item, 'heroSlide')}
+                onDelete={(id) => handleDelete(id, 'heroSlide')}
+                onDeleteSelected={handleDeleteSelectedHeroSlides}
+                onHideSelected={(ids) => handleSetHeroSlideVisibility(ids, false)}
+                onRestoreSelected={(ids) => handleSetHeroSlideVisibility(ids, true)}
+                onReorderVisible={handleReorderVisibleHeroSlides}
+                onAddNew={() => handleAddNew('heroSlide')}
+              />
+            </section>
+
+            <section aria-labelledby="announcements-events-admin-heading" className="space-y-4">
+              <div>
+                <h2 id="announcements-events-admin-heading" className="text-2xl font-bold text-gray-900">
+                  Announcements & Events
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Add announcements with or without hero images. Announcements created without a hero image appear only on the Updates page.
+                </p>
+              </div>
+              <AnnouncementList
+                announcements={upcomingAnnouncements}
+                onEdit={(item) => handleEdit(item, 'announcement')}
+                onDelete={(id) => handleDelete(id, 'announcement')}
+                onAddNew={() => handleAddNew('announcement')}
+                onDuplicate={(item) => handleDuplicate(item, 'announcement')}
+                title="Current Announcements & Events"
+                showAddNew={true}
+              />
+              {allHidden.length > 0 && (
+                <AnnouncementList
+                  announcements={allHidden}
+                  onEdit={(item) => handleEdit(item, 'announcement')}
+                  onDelete={(id) => handleDelete(id, 'announcement')}
+                  onDuplicate={(item) => handleDuplicate(item, 'announcement')}
+                  title="Hidden Announcements"
+                  showAddNew={false}
+                />
+              )}
+              {pastAnnouncements.length > 0 && (
+                <AnnouncementList
+                  announcements={pastAnnouncements}
+                  onEdit={(item) => handleEdit(item, 'announcement')}
+                  onDelete={(id) => handleDelete(id, 'announcement')}
+                  onDuplicate={(item) => handleDuplicate(item, 'announcement')}
+                  title="Past Announcements"
+                  showAddNew={false}
+                />
+              )}
+            </section>
+          </div>
+        );
       case 'sitePopups':
         return <SitePopupList
           popups={sitePopups}
@@ -1979,25 +2002,11 @@ export default function AdminPage() {
         
         <div className="mb-8 flex justify-center flex-wrap gap-4 border-b pb-4">
           <Button
-            variant={view === 'announcements' ? 'default' : 'outline'}
-            onClick={() => { setView('announcements'); setFormView(null); }}
-            className={`gap-2 ${view === 'announcements' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
-          >
-            <Megaphone className="w-5 h-5" /> Announcements & Events
-          </Button>
-          <Button
             variant={view === 'worshipEvents' ? 'default' : 'outline'}
             onClick={() => { setView('worshipEvents'); setFormView(null); }}
             className={`gap-2 ${view === 'worshipEvents' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
           >
             <CalendarHeart className="w-5 h-5" /> Calendar of Worship
-          </Button>
-          <Button
-            variant={view === 'pastEvents' ? 'default' : 'outline'}
-            onClick={() => { setView('pastEvents'); setFormView(null); }}
-            className={`gap-2 ${view === 'pastEvents' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
-          >
-            <Images className="w-5 h-5" /> Past Events Gallery
           </Button>
           <Button
             variant={view === 'sermons' ? 'default' : 'outline'}
@@ -2021,18 +2030,11 @@ export default function AdminPage() {
               <MessageSquare className="w-5 h-5" /> Homepage Banner
             </Button>
             <Button
-              variant={view === 'hiddenAnnouncements' ? 'default' : 'outline'}
-              onClick={() => { setView('hiddenAnnouncements'); setFormView(null); }}
-              className={`gap-2 ${view === 'hiddenAnnouncements' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
-            >
-              <EyeOff className="w-5 h-5" /> Hidden Announcements
-            </Button>
-            <Button
               variant={view === 'heroSlides' ? 'default' : 'outline'}
               onClick={() => { setView('heroSlides'); setFormView(null); }}
               className={`gap-2 ${view === 'heroSlides' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
             >
-              <LayoutTemplate className="w-5 h-5" /> Hero Slideshow
+              <LayoutTemplate className="w-5 h-5" /> Hero Slides & Announcements
             </Button>
             <Button
               variant={view === 'sitePopups' ? 'default' : 'outline'}
