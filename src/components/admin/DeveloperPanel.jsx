@@ -43,6 +43,7 @@ export default function DeveloperPanel({
   onRefresh,
   onCreateAdmin,
   onDeleteAdmin,
+  onUpdateAdminRole,
   canManageAdmins = false,
   currentAdminEmail = "",
 }) {
@@ -52,6 +53,7 @@ export default function DeveloperPanel({
   const [adminStatus, setAdminStatus] = useState("");
   const [sendingInvite, setSendingInvite] = useState(false);
   const [deletingAdminUid, setDeletingAdminUid] = useState("");
+  const [updatingAdminUid, setUpdatingAdminUid] = useState("");
   const latestLog = logs[0];
   const loginCount = logs.filter((log) => log.action === "signed_in").length;
   const contentCount = logs.filter((log) => ["created", "updated", "deleted", "duplicated"].includes(log.action)).length;
@@ -81,13 +83,30 @@ export default function DeveloperPanel({
       await onCreateAdmin({
         email: normalizedEmail,
       });
-      setInviteStatus(`Admin invitation sent to ${normalizedEmail}.`);
+      setInviteStatus(`Site Admin invitation sent to ${normalizedEmail}.`);
       setEmail("");
       setErrors({});
     } catch (error) {
       setInviteStatus(error.message || "Unable to send the admin invitation.");
     } finally {
       setSendingInvite(false);
+    }
+  };
+
+  const handleUpdateRole = async (admin, role) => {
+    const adminEmail = admin.email || "this administrator";
+    const roleLabel = role === "site_developer" ? "Site Developer" : "Site Admin";
+    if (!window.confirm(`Change ${adminEmail} to ${roleLabel}? This does not send an email.`)) return;
+
+    setUpdatingAdminUid(admin.uid);
+    setAdminStatus("");
+    try {
+      await onUpdateAdminRole(admin, role);
+      setAdminStatus(`${adminEmail} is now ${roleLabel}.`);
+    } catch (error) {
+      setAdminStatus(error.message || "Unable to update the administrator role.");
+    } finally {
+      setUpdatingAdminUid("");
     }
   };
 
@@ -160,7 +179,7 @@ export default function DeveloperPanel({
             <Users className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-950">Site Administrators</h3>
+            <h3 className="text-xl font-bold text-gray-950">Site Administrators and Developers</h3>
           </div>
         </div>
 
@@ -196,7 +215,9 @@ export default function DeveloperPanel({
                 const hasName = Boolean(admin.first_name && admin.last_name);
                 const adminEmail = admin.email || "";
                 const isCurrentDeveloper = adminEmail.toLowerCase() === currentAdminEmail.toLowerCase();
-                const roleLabel = admin.role_label || (isCurrentDeveloper ? "Site Developer" : "Site Administrator");
+                const isRootDeveloper = adminEmail.toLowerCase() === "nebajaphate@gmail.com";
+                const roleLabel = admin.role_label || (admin.role === "site_developer" || isCurrentDeveloper ? "Site Developer" : "Site Admin");
+                const isSiteDeveloper = roleLabel === "Site Developer";
                 return (
                   <tr key={admin.uid || admin.email} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-4 font-semibold text-gray-900">{fullName || "Name not entered yet"}</td>
@@ -214,19 +235,36 @@ export default function DeveloperPanel({
                         </Badge>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-right">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteAdmin(admin)}
-                        disabled={!canManageAdmins || isCurrentDeveloper || deletingAdminUid === admin.uid}
-                        title={isCurrentDeveloper ? "The site developer cannot delete their own admin record" : "Remove admin access"}
-                        className="gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                        {deletingAdminUid === admin.uid ? "Removing..." : "Remove Admin"}
-                      </Button>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {canManageAdmins && !isRootDeveloper && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleUpdateRole(admin, isSiteDeveloper ? "site_admin" : "site_developer")}
+                            disabled={updatingAdminUid === admin.uid}
+                            className={`gap-2 ${isSiteDeveloper ? "border-blue-200 text-blue-700 hover:bg-blue-50" : "border-amber-200 text-amber-700 hover:bg-amber-50"}`}
+                          >
+                            <ShieldCheck className="h-4 w-4" />
+                            {updatingAdminUid === admin.uid
+                              ? "Updating..."
+                              : isSiteDeveloper ? "Make Site Admin" : "Make Developer"}
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteAdmin(admin)}
+                          disabled={!canManageAdmins || isRootDeveloper || deletingAdminUid === admin.uid}
+                          title={isRootDeveloper ? "The permanent root Site Developer cannot be removed" : "Remove admin access"}
+                          className="gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                          {deletingAdminUid === admin.uid ? "Removing..." : "Remove Admin"}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -243,8 +281,8 @@ export default function DeveloperPanel({
             <UserPlus className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-950">Add Site Administrator</h3>
-            <p className="mt-1 text-sm text-gray-600">Add the admin email and send a one-time setup link.</p>
+            <h3 className="text-xl font-bold text-gray-950">Add Site Admin</h3>
+            <p className="mt-1 text-sm text-gray-600">Add the email and send a one-time setup link. Promote Site Admins to Site Developer after setup.</p>
           </div>
         </div>
 
@@ -281,10 +319,10 @@ export default function DeveloperPanel({
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
             <p className="text-xs text-amber-950">
-              The new admin will receive a secure setup link. They will enter their name and create their own password before admin access is granted.
+              The new user will receive a secure setup link as a Site Admin. The root Site Developer can promote them later without sending another email.
             </p>
             <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={sendingInvite}>
-              {sendingInvite ? "Sending Invite..." : "Create Admin and Send Email"}
+              {sendingInvite ? "Sending Invite..." : "Create Site Admin and Send Email"}
             </Button>
           </div>
         </form>

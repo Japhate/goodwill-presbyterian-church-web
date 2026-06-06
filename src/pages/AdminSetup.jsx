@@ -26,6 +26,7 @@ export default function AdminSetup() {
   const [searchParams] = useSearchParams();
   const token = useMemo(() => String(searchParams.get("token") || "").trim(), [searchParams]);
   const [email, setEmail] = useState("");
+  const [roleLabel, setRoleLabel] = useState("Site Admin");
   const [expiresAt, setExpiresAt] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -49,6 +50,7 @@ export default function AdminSetup() {
         const body = await response.json().catch(() => null);
         if (!response.ok) throw new Error(body?.error || "This invitation is invalid or has expired.");
         setEmail(body.email || "");
+        setRoleLabel(body.roleLabel || (body.role === "site_developer" ? "Site Developer" : "Site Admin"));
         setExpiresAt(body.expiresAt || "");
       } catch (error) {
         setStatus(error.message || "This invitation is invalid or has expired.");
@@ -125,7 +127,7 @@ export default function AdminSetup() {
         <div className="bg-[#4b342a] px-6 py-6 text-white">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-amber-200">
             <ShieldCheck className="h-4 w-4" />
-            Site Administrator Setup
+            {roleLabel} Setup
           </p>
           <h1 className="mt-2 text-2xl font-bold">Create Your New Admin Password</h1>
           <p className="mt-2 text-sm text-amber-50">Enter your name and the password you want to use.</p>
@@ -148,6 +150,11 @@ export default function AdminSetup() {
               <FieldLabel>Email Address</FieldLabel>
               <Input type="email" value={email} readOnly className="bg-gray-50 font-semibold text-gray-700" />
               {formattedExpiry && <p className="mt-1 text-xs text-gray-500">Invitation expires {formattedExpiry}.</p>}
+            </div>
+
+            <div>
+              <FieldLabel>Role</FieldLabel>
+              <Input type="text" value={roleLabel} readOnly className="bg-gray-50 font-semibold text-gray-700" />
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

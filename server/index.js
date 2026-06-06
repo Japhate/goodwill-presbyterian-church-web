@@ -23,6 +23,10 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
 const CANONICAL_HOST = 'www.goodwillpresch1867.com';
 const SITE_DEVELOPER_EMAIL = 'nebajaphate@gmail.com';
+const ADMIN_ROLES = {
+  SITE_ADMIN: 'site_admin',
+  SITE_DEVELOPER: 'site_developer',
+};
 const LEGACY_HOSTS = new Set([]);
 
 app.use((req, res, next) => {
@@ -62,6 +66,29 @@ function normalizeEmail(email) {
 
 function normalizePersonName(name) {
   return String(name || '').trim().replace(/\s+/g, ' ');
+}
+
+function normalizeAdminRole(role, email = '') {
+  const normalizedRole = String(role || '').trim().toLowerCase();
+  if (normalizedRole === ADMIN_ROLES.SITE_DEVELOPER) return ADMIN_ROLES.SITE_DEVELOPER;
+  if (normalizeEmail(email) === SITE_DEVELOPER_EMAIL) return ADMIN_ROLES.SITE_DEVELOPER;
+  return ADMIN_ROLES.SITE_ADMIN;
+}
+
+function getAdminRoleLabel(role) {
+  return role === ADMIN_ROLES.SITE_DEVELOPER ? 'Site Developer' : 'Site Admin';
+}
+
+function isRootSiteDeveloper(admin = {}) {
+  return normalizeEmail(admin.email) === SITE_DEVELOPER_EMAIL;
+}
+
+function assertRootSiteDeveloper(admin = {}) {
+  if (!isRootSiteDeveloper(admin)) {
+    const error = new Error('Only the permanent root Site Developer can add, remove, promote, or demote administrators.');
+    error.status = 403;
+    throw error;
+  }
 }
 
 function createInvitationToken() {
@@ -237,7 +264,8 @@ async function assertDeveloperAdminRequest(req) {
 
   const adminData = adminSnapshot.data() || {};
   const email = normalizeEmail(adminData.email || decoded.email);
-  if (email !== SITE_DEVELOPER_EMAIL) {
+  const role = normalizeAdminRole(adminData.role, email);
+  if (role !== ADMIN_ROLES.SITE_DEVELOPER) {
     const error = new Error('This action is limited to developer administrators.');
     error.status = 403;
     throw error;
@@ -246,6 +274,7 @@ async function assertDeveloperAdminRequest(req) {
   return {
     uid,
     email,
+    role,
     firstName: normalizePersonName(adminData.first_name),
     lastName: normalizePersonName(adminData.last_name),
   };
@@ -451,9 +480,11 @@ function buildAdminBroadcastNotificationEmail({ admin, subject, sent, failed, re
   };
 }
 
-function buildAdminInvitationEmail({ email, setupLink, expiresAt }) {
+function buildAdminInvitationEmail({ email, setupLink, expiresAt, role = ADMIN_ROLES.SITE_ADMIN }) {
   const escapedEmail = escapeHtml(email);
   const escapedSetupLink = escapeHtml(setupLink);
+  const roleLabel = getAdminRoleLabel(role);
+  const escapedRoleLabel = escapeHtml(roleLabel);
   const expiresText = expiresAt ? new Date(expiresAt).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -468,10 +499,11 @@ function buildAdminInvitationEmail({ email, setupLink, expiresAt }) {
     text: [
       'Hello Brethren,',
       '',
-      'You have been invited to act as site administrator for the Goodwill Presbyterian Church website by the site developer, Mr. Neba.',
+      `You have been invited to act as ${roleLabel} for the Goodwill Presbyterian Church website.`,
       'Please use the secure one-time setup link below to create your password.',
       '',
       `Email: ${email}`,
+      `Role: ${roleLabel}`,
       expiresText ? `Invitation expires: ${expiresText}` : '',
       '',
       'Create New Password:',
@@ -487,15 +519,16 @@ function buildAdminInvitationEmail({ email, setupLink, expiresAt }) {
         <div style="max-width:640px;margin:0 auto;padding:30px 18px;">
           <div style="background:#ffffff;border:1px solid #eadcc7;border-radius:12px;overflow:hidden;">
             <div style="background:#4b342a;color:#ffffff;padding:24px 28px;">
-              <p style="margin:0 0 8px;color:#f4d78d;font-size:12px;font-weight:bold;letter-spacing:0.08em;text-transform:uppercase;">Site Administrator Access</p>
+              <p style="margin:0 0 8px;color:#f4d78d;font-size:12px;font-weight:bold;letter-spacing:0.08em;text-transform:uppercase;">${escapedRoleLabel} Access</p>
               <h1 style="margin:0;font-size:24px;line-height:1.3;">Welcome to the Goodwill Presbyterian Church admin team</h1>
             </div>
             <div style="padding:28px;font-size:16px;line-height:1.6;">
               <p style="margin:0 0 16px;">Hello Brethren,</p>
-              <p style="margin:0 0 16px;">You have been invited to act as site administrator for the Goodwill Presbyterian Church website by the site developer, Mr. Neba.</p>
+              <p style="margin:0 0 16px;">You have been invited to act as ${escapedRoleLabel} for the Goodwill Presbyterian Church website.</p>
               <p style="margin:0 0 16px;">Please use the secure one-time setup link below to create your password.</p>
               <div style="background:#fbf7f0;border:1px solid #eadcc7;border-radius:10px;padding:16px;margin:18px 0;">
                 <p style="margin:0 0 8px;"><strong>Email:</strong> ${escapedEmail}</p>
+                <p style="margin:0 0 8px;"><strong>Role:</strong> ${escapedRoleLabel}</p>
                 ${expiresText ? `<p style="margin:0;"><strong>Invitation expires:</strong> ${escapeHtml(expiresText)}</p>` : ''}
               </div>
               <p style="margin:0 0 22px;text-align:center;">
@@ -796,16 +829,14 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
   let developerAdmin;
   try {
     developerAdmin = await assertDeveloperAdminRequest(req);
+    assertRootSiteDeveloper(developerAdmin);
   } catch (error) {
     console.error('Create site admin authorization error', error?.message || error);
     return res.status(error.status || 401).json({ error: error.message });
   }
 
-  if (developerAdmin.email !== SITE_DEVELOPER_EMAIL) {
-    return res.status(403).json({ error: 'Only the main site developer can create site administrator accounts.' });
-  }
-
   const email = normalizeEmail(req.body?.email);
+  const role = ADMIN_ROLES.SITE_ADMIN;
   const siteProtocol = req.body?.protocol || 'https';
   const siteHost = req.body?.host || CANONICAL_HOST;
   const siteUrl = `${siteProtocol}://${siteHost}`;
@@ -831,6 +862,7 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
 
     const invitationRef = await db.collection('AdminInvitations').add({
       email,
+      role,
       token_hash: tokenHash,
       status: 'pending',
       invited_by_uid: developerAdmin.uid,
@@ -845,6 +877,7 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
       email,
       setupLink,
       expiresAt,
+      role,
     });
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
     const emailResponse = await sendResendEmail({
@@ -868,6 +901,7 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
       success: true,
       invitationId: invitationRef.id,
       email,
+      role,
       expiresAt,
     });
   } catch (error) {
@@ -909,6 +943,8 @@ app.get('/api/admin/setup-invitation', async (req, res) => {
     if (!invitation) return res.status(404).json({ error: 'This invitation is invalid or has expired.' });
     res.json({
       email: invitation.email,
+      role: normalizeAdminRole(invitation.role, invitation.email),
+      roleLabel: getAdminRoleLabel(normalizeAdminRole(invitation.role, invitation.email)),
       expiresAt: invitation.expires_at,
     });
   } catch (error) {
@@ -938,6 +974,7 @@ app.post('/api/admin/complete-invitation', async (req, res) => {
     const auth = getAdminAuth(app);
     const db = getAdminFirestore(app);
     const email = normalizeEmail(invitation.email);
+    const role = normalizeAdminRole(invitation.role, email);
     const displayName = `${firstName} ${lastName}`.trim();
     let userRecord;
     let existingUser = false;
@@ -966,6 +1003,8 @@ app.post('/api/admin/complete-invitation', async (req, res) => {
       first_name: firstName,
       last_name: lastName,
       email,
+      role,
+      role_label: getAdminRoleLabel(role),
       photo_url: '',
       has_saved_name: true,
       invited_by_uid: invitation.invited_by_uid || '',
@@ -985,6 +1024,8 @@ app.post('/api/admin/complete-invitation', async (req, res) => {
     res.json({
       success: true,
       email,
+      role,
+      roleLabel: getAdminRoleLabel(role),
       uid: userRecord.uid,
       existingUser,
     });
@@ -1002,15 +1043,18 @@ app.get('/api/admin/site-admins', async (req, res) => {
     const rows = adminSnapshot.docs
       .map((entry) => {
         const data = entry.data() || {};
+        const email = normalizeEmail(data.email);
+        const role = normalizeAdminRole(data.role, email);
         return {
         uid: entry.id,
-        email: normalizeEmail(data.email),
+        email,
+        role,
         first_name: normalizePersonName(data.first_name),
         last_name: normalizePersonName(data.last_name),
         has_saved_name: Boolean(data.first_name && data.last_name),
         created_date: data.created_date || '',
         updated_date: data.updated_date || '',
-        role_label: normalizeEmail(data.email) === SITE_DEVELOPER_EMAIL ? 'Site Developer' : 'Site Administrator',
+        role_label: getAdminRoleLabel(role),
         };
       })
       .filter((admin) => admin.uid || admin.email);
@@ -1023,6 +1067,7 @@ app.get('/api/admin/site-admins', async (req, res) => {
       rows.push({
         uid: developerAdmin.uid,
         email: developerAdmin.email,
+        role: developerAdmin.role,
         first_name: developerAdmin.firstName,
         last_name: developerAdmin.lastName,
         has_saved_name: Boolean(developerAdmin.firstName && developerAdmin.lastName),
@@ -1045,6 +1090,7 @@ app.delete('/api/admin/site-admins/:uid', async (req, res) => {
   let developerAdmin;
   try {
     developerAdmin = await assertDeveloperAdminRequest(req);
+    assertRootSiteDeveloper(developerAdmin);
   } catch (error) {
     return res.status(error.status || 401).json({ error: error.message });
   }
@@ -1052,7 +1098,7 @@ app.delete('/api/admin/site-admins/:uid', async (req, res) => {
   const uid = String(req.params.uid || '').trim();
   if (!uid) return res.status(400).json({ error: 'Administrator UID is required.' });
   if (uid === developerAdmin.uid) {
-    return res.status(400).json({ error: 'The site developer account cannot delete itself.' });
+    return res.status(400).json({ error: 'The permanent root Site Developer account cannot delete itself.' });
   }
 
   try {
@@ -1064,6 +1110,9 @@ app.delete('/api/admin/site-admins/:uid', async (req, res) => {
     }
 
     const adminData = snapshot.data() || {};
+    if (normalizeEmail(adminData.email) === SITE_DEVELOPER_EMAIL) {
+      return res.status(400).json({ error: 'The permanent root Site Developer cannot be removed.' });
+    }
     await adminRef.delete();
     res.json({
       success: true,
@@ -1073,6 +1122,56 @@ app.delete('/api/admin/site-admins/:uid', async (req, res) => {
   } catch (error) {
     console.error('Delete site admin error', error?.message || error);
     res.status(error.status || 500).json({ error: error?.message || 'Unable to delete the site administrator.' });
+  }
+});
+
+app.patch('/api/admin/site-admins/:uid/role', async (req, res) => {
+  let developerAdmin;
+  try {
+    developerAdmin = await assertDeveloperAdminRequest(req);
+    assertRootSiteDeveloper(developerAdmin);
+  } catch (error) {
+    return res.status(error.status || 401).json({ error: error.message });
+  }
+
+  const uid = String(req.params.uid || '').trim();
+  const requestedRole = String(req.body?.role || '').trim().toLowerCase();
+  const role = normalizeAdminRole(requestedRole);
+  if (!uid) return res.status(400).json({ error: 'Administrator UID is required.' });
+  if (![ADMIN_ROLES.SITE_ADMIN, ADMIN_ROLES.SITE_DEVELOPER].includes(requestedRole)) {
+    return res.status(400).json({ error: 'A valid administrator role is required.' });
+  }
+
+  try {
+    const db = getAdminFirestore(getFirebaseAdminApp());
+    const adminRef = db.collection('admins').doc(uid);
+    const snapshot = await adminRef.get();
+    if (!snapshot.exists) {
+      return res.status(404).json({ error: 'No Firestore admin record was found for this user.' });
+    }
+
+    const adminData = snapshot.data() || {};
+    const email = normalizeEmail(adminData.email);
+    if (email === SITE_DEVELOPER_EMAIL && role !== ADMIN_ROLES.SITE_DEVELOPER) {
+      return res.status(400).json({ error: 'The permanent root Site Developer cannot be demoted.' });
+    }
+
+    await adminRef.update({
+      role,
+      role_label: getAdminRoleLabel(role),
+      updated_date: new Date().toISOString(),
+    });
+
+    res.json({
+      success: true,
+      uid,
+      email,
+      role,
+      roleLabel: getAdminRoleLabel(role),
+    });
+  } catch (error) {
+    console.error('Update site admin role error', error?.message || error);
+    res.status(error.status || 500).json({ error: error?.message || 'Unable to update the administrator role.' });
   }
 });
 

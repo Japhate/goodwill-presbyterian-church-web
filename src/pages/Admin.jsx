@@ -57,6 +57,10 @@ const ADMIN_VIEWS = new Set([
 const ACTIVITY_EVENTS = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'];
 const ADMIN_PRIVACY_NOTICE_VERSION = '2026-05-31';
 const SITE_DEVELOPER_EMAIL = 'nebajaphate@gmail.com';
+const ADMIN_ROLES = {
+  SITE_ADMIN: 'site_admin',
+  SITE_DEVELOPER: 'site_developer',
+};
 const FORM_LOG_META = {
   announcement: { section: 'Hero Slides & Announcements', itemType: 'announcement' },
   worshipEvent: { section: 'Calendar of Worship', itemType: 'worship event' },
@@ -138,6 +142,8 @@ function getKnownAdminNameFallback(email = '') {
 function deriveAdminProfile(user = {}, profile = {}) {
   const fallbackName = splitDisplayName(user.full_name || firebaseAuth?.currentUser?.displayName || '');
   const email = profile.email || user.email || firebaseAuth?.currentUser?.email || '';
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const role = profile.role || user.admin_role || user.role_key || (normalizedEmail === SITE_DEVELOPER_EMAIL ? ADMIN_ROLES.SITE_DEVELOPER : ADMIN_ROLES.SITE_ADMIN);
   const emailName = email ? email.split('@')[0].replace(/[._-]+/g, ' ') : '';
   const emailFallback = splitDisplayName(emailName);
   const knownAdminName = getKnownAdminNameFallback(email);
@@ -152,6 +158,8 @@ function deriveAdminProfile(user = {}, profile = {}) {
     last_name: lastName,
     has_saved_name: hasSavedProfileName,
     email,
+    role,
+    role_label: role === ADMIN_ROLES.SITE_DEVELOPER ? 'Site Developer' : 'Site Admin',
     photo_url: profile.photo_url || user.photo_url || '',
   };
 }
@@ -164,8 +172,13 @@ function getInitials(profile = {}) {
     .slice(0, 2) || 'SA';
 }
 
-function isDeveloperAdminEmail(email = '') {
-  return String(email || '').trim().toLowerCase() === SITE_DEVELOPER_EMAIL;
+function isSiteDeveloperAdmin(admin = {}) {
+  const email = String(admin?.email || '').trim().toLowerCase();
+  return admin?.role === ADMIN_ROLES.SITE_DEVELOPER || email === SITE_DEVELOPER_EMAIL;
+}
+
+function isRootSiteDeveloper(admin = {}) {
+  return String(admin?.email || '').trim().toLowerCase() === SITE_DEVELOPER_EMAIL;
 }
 
 function getItemLabel(type, data = {}) {
@@ -254,9 +267,9 @@ export default function AdminPage() {
   const inactivityTimerRef = useRef(null);
   const privacyNoticeRef = useRef(null);
   const adminInstructionRef = useRef(null);
-  const canViewDeveloperPanel = isDeveloperAdminEmail(currentAdmin?.email);
-  const canManageSiteAdmins = canViewDeveloperPanel;
-  const adminRoleLabel = canManageSiteAdmins ? 'Site Developer' : 'Site Administrator';
+  const canViewDeveloperPanel = isSiteDeveloperAdmin(currentAdmin);
+  const canManageSiteAdmins = isRootSiteDeveloper(currentAdmin);
+  const adminRoleLabel = canManageSiteAdmins ? 'Site Developer' : 'Site Admin';
   const adminSectionOptions = [
     { value: 'worshipEvents', label: 'Calendar of Worship', icon: CalendarHeart, instructions: 'Create and maintain worship services, special observances, dates, times, and worship calendar details.' },
     { value: 'sermons', label: 'Sermons', icon: PlaySquare, instructions: 'Manage sermon recordings, titles, dates, speakers, scripture references, and links for the Sermons page.' },
@@ -302,7 +315,7 @@ export default function AdminPage() {
         user_agent: window.navigator.userAgent,
         created_date: new Date().toISOString(),
       });
-      if (isDeveloperAdminEmail(actorEmail)) {
+      if (isSiteDeveloperAdmin(actor)) {
         setAdminActivityLogs((logs) => [createdLog, ...logs].slice(0, 300));
       }
     } catch (error) {
@@ -343,6 +356,7 @@ export default function AdminPage() {
       has_saved_name: Boolean((currentAdmin.first_name || currentAdmin.firstName) && (currentAdmin.last_name || currentAdmin.lastName)),
       created_date: currentAdmin.created_date || '',
       updated_date: currentAdmin.updated_date || '',
+      role: ADMIN_ROLES.SITE_DEVELOPER,
       role_label: 'Site Developer',
     } : null;
 
@@ -513,13 +527,38 @@ export default function AdminPage() {
   useEffect(() => {
     const checkInstructionOverflow = () => {
       const node = adminInstructionRef.current;
-      if (!node || adminInstructionExpanded) return;
-      setAdminInstructionOverflows(node.scrollHeight > node.clientHeight + 1);
+      if (!node) return;
+
+      const computedStyle = window.getComputedStyle(node);
+      const lineHeight = parseFloat(computedStyle.lineHeight) || 16;
+      const maxCollapsedHeight = lineHeight * 2 + 1;
+      const measureNode = node.cloneNode(true);
+      measureNode.classList.remove('line-clamp-2');
+      measureNode.style.position = 'absolute';
+      measureNode.style.visibility = 'hidden';
+      measureNode.style.pointerEvents = 'none';
+      measureNode.style.width = `${node.clientWidth}px`;
+      measureNode.style.height = 'auto';
+      measureNode.style.maxHeight = 'none';
+      measureNode.style.overflow = 'visible';
+      measureNode.style.webkitLineClamp = 'unset';
+      measureNode.style.display = 'block';
+      document.body.appendChild(measureNode);
+      const fullTextHeight = measureNode.scrollHeight;
+      document.body.removeChild(measureNode);
+
+      setAdminInstructionOverflows(fullTextHeight > maxCollapsedHeight);
     };
 
-    checkInstructionOverflow();
+    const animationFrame = window.requestAnimationFrame(checkInstructionOverflow);
+    const timeout = window.setTimeout(checkInstructionOverflow, 250);
+    document.fonts?.ready?.then(checkInstructionOverflow).catch(() => {});
     window.addEventListener('resize', checkInstructionOverflow);
-    return () => window.removeEventListener('resize', checkInstructionOverflow);
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(timeout);
+      window.removeEventListener('resize', checkInstructionOverflow);
+    };
   }, [selectedAdminInstructions, adminInstructionExpanded]);
 
   useEffect(() => {
@@ -1600,13 +1639,50 @@ export default function AdminPage() {
     await logAdminActivity({
       action: 'created_admin',
       section: 'Developer Panel',
-      itemType: 'site administrator',
+      itemType: 'site admin',
       itemId: body.uid,
       itemLabel: email,
       details: {
+        role: ADMIN_ROLES.SITE_ADMIN,
         invitation_email_sent: true,
         invitation_expires_at: body.expiresAt || '',
         name_collected_on_first_sign_in: true,
+      },
+    });
+    await loadSiteAdminComparison();
+    await loadAdminActivityLogs();
+    return body;
+  };
+
+  const handleUpdateSiteAdminRole = async (admin, role) => {
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) {
+      throw new Error('Please sign in again before changing this administrator role.');
+    }
+
+    const response = await fetch(`/api/admin/site-admins/${encodeURIComponent(admin.uid)}/role`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ role }),
+    });
+
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(body?.error || 'Unable to update this administrator role.');
+    }
+
+    await logAdminActivity({
+      action: role === ADMIN_ROLES.SITE_DEVELOPER ? 'promoted' : 'demoted',
+      section: 'Developer Panel',
+      itemType: role === ADMIN_ROLES.SITE_DEVELOPER ? 'site developer' : 'site admin',
+      itemId: admin.uid,
+      itemLabel: admin.email || '',
+      details: {
+        previous_role: admin.role || '',
+        role,
       },
     });
     await loadSiteAdminComparison();
@@ -2238,6 +2314,7 @@ export default function AdminPage() {
               }}
               onCreateAdmin={handleCreateSiteAdmin}
               onDeleteAdmin={handleDeleteSiteAdmin}
+              onUpdateAdminRole={handleUpdateSiteAdminRole}
               canManageAdmins={canManageSiteAdmins}
               currentAdminEmail={currentAdmin?.email || ''}
             />

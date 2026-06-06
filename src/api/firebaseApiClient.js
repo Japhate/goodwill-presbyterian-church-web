@@ -212,6 +212,7 @@ async function firebaseUser() {
   const adminRecord = await getDoc(doc(firestore, "admins", user.uid));
   if (!adminRecord.exists()) throw new Error("This account is not an administrator.");
   const adminData = adminRecord.data() || {};
+  const role = adminData.role || (String(adminData.email || user.email || "").trim().toLowerCase() === "nebajaphate@gmail.com" ? "site_developer" : "site_admin");
 
   return {
     id: user.uid,
@@ -220,6 +221,8 @@ async function firebaseUser() {
     last_name: adminData.last_name || "",
     photo_url: adminData.photo_url || "",
     full_name: [adminData.first_name, adminData.last_name].filter(Boolean).join(" ") || user.displayName || user.email,
+    admin_role: role,
+    role_key: role,
     role: "admin",
   };
 }
