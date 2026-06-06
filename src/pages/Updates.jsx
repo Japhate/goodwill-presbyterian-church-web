@@ -391,8 +391,8 @@ export default function Updates() {
                     }`}
                   >
                     {item.image_upload ? (
-                      <div className="h-48 w-full overflow-hidden">
-                        <img src={item.image_upload} alt={item.title} className="w-full h-full object-cover" />
+                      <div className="flex aspect-[48/19] w-full items-center justify-center overflow-hidden bg-gray-950">
+                        <img src={item.image_upload} alt={item.title} className="h-full w-full object-contain" />
                       </div>
                     ) : null}
                     <div className="p-6 flex flex-col flex-grow">
@@ -411,11 +411,11 @@ export default function Updates() {
                           </ReactMarkdown>
                         </div>
                       </div>
-                      <div className="mt-4 pt-4 border-t text-sm text-gray-500 space-y-2">
-                        {dateLabel && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 flex-shrink-0" /><strong className="font-semibold">Date:</strong> {dateLabel}</div>}
-                        {timeLabel && <div className="flex items-center gap-2"><Clock className="w-4 h-4 flex-shrink-0" /><strong className="font-semibold">Time:</strong> {timeLabel}</div>}
-                        {item.frequency && <div className="flex items-center gap-2"><Clock className="w-4 h-4 flex-shrink-0" /><strong className="font-semibold">Frequency:</strong> {item.frequency}</div>}
-                        {item.location && <div className="flex items-center gap-2"><MapPin className="w-4 h-4 flex-shrink-0" /><strong className="font-semibold">Location:</strong> {item.location}</div>}
+                      <div className="mt-4 space-y-2 border-t pt-4 text-sm text-gray-500">
+                        {dateLabel && <div className="flex items-start gap-2"><Calendar className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Date:</strong> {dateLabel}</span></div>}
+                        {timeLabel && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Time:</strong> {timeLabel}</span></div>}
+                        {item.frequency && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Frequency:</strong> {item.frequency}</span></div>}
+                        {item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>}
                         {(item.zoom_link || item.file_upload) && (
                           <div className="flex flex-wrap gap-2 pt-2">
                             {item.zoom_link && (
@@ -538,10 +538,10 @@ export default function Updates() {
                       selectedAnnouncementId === String(item.id) ? "ring-4 ring-amber-400 ring-offset-4" : ""
                     }`}
                   >
-                    <div className="flex gap-6">
+                    <div className="flex flex-col gap-5">
                       {item.image_upload && (
-                        <div className="w-32 h-32 flex-shrink-0 overflow-hidden rounded-lg">
-                          <img src={item.image_upload} alt={item.title} className="w-full h-full object-cover" />
+                        <div className="flex aspect-[48/19] w-full items-center justify-center overflow-hidden rounded-lg bg-gray-950">
+                          <img src={item.image_upload} alt={item.title} className="h-full w-full object-contain" />
                         </div>
                       )}
                       <div className="flex-1">
@@ -557,11 +557,11 @@ export default function Updates() {
                             </ReactMarkdown>
                           </div>
                         )}
-                        <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                          {dateLabel && <div className="flex items-center gap-1"><Calendar className="w-4 h-4" />{dateLabel}</div>}
-                          {timeLabel && <div className="flex items-center gap-1"><Clock className="w-4 h-4" />{timeLabel}</div>}
-                          {item.frequency && <div className="flex items-center gap-1"><Clock className="w-4 h-4" />{item.frequency}</div>}
-                          {item.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" />{item.location}</div>}
+                        <div className="space-y-2 text-sm text-gray-500">
+                          {dateLabel && <div className="flex items-start gap-2"><Calendar className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Date:</strong> {dateLabel}</span></div>}
+                          {timeLabel && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Time:</strong> {timeLabel}</span></div>}
+                          {item.frequency && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Frequency:</strong> {item.frequency}</span></div>}
+                          {item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>}
                         </div>
                         {(item.zoom_link || item.file_upload) && (
                           <div className="mt-4 flex flex-wrap gap-2">
