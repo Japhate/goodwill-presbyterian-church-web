@@ -22,6 +22,8 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
     zoom_link: '',
     meeting_id: '',
     meeting_passcode: '',
+    contact_email: '',
+    contact_phone: '',
     directions_url: '',
     file_upload: '',
     file_label: '',
@@ -224,6 +226,14 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
             </div>
           </>
         )}
+        <div>
+          <label htmlFor="contact_email" className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+          <Input id="contact_email" type="email" placeholder="e.g. office@goodwillpresch1867.com" value={formData.contact_email || ''} onChange={e => handleChange('contact_email', e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="contact_phone" className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+          <Input id="contact_phone" type="tel" placeholder="e.g. (803) 555-1234" value={formData.contact_phone || ''} onChange={e => handleChange('contact_phone', e.target.value)} />
+        </div>
       </div>
       
       <div>

@@ -503,7 +503,7 @@ export default function HeroSlideshow() {
                   className={
                     currentSlide.is_priority_announcement
                       ? "absolute bottom-3 left-1/2 hidden -translate-x-1/2 flex-wrap items-center justify-center gap-2 md:flex"
-                      : "absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 sm:bottom-12 md:bottom-16"
+                      : "absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 sm:bottom-4 md:bottom-6"
                   }
                 >
                   {relatedAnnouncementUrl && (
@@ -511,8 +511,8 @@ export default function HeroSlideshow() {
                       href={relatedAnnouncementUrl}
                       className={
                         currentSlide.is_priority_announcement
-                          ? "inline-flex items-center gap-1.5 rounded-full border border-amber-200/70 bg-white/95 px-6 py-3 text-base font-bold text-black shadow-lg transition-all hover:bg-amber-100"
-                          : "inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-gray-950 shadow-lg transition-all hover:bg-amber-100 sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:px-6 md:py-3 md:text-base"
+                          ? "inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-3 text-base font-bold text-white shadow-lg transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-xl"
+                          : "inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-xl sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:px-6 md:py-3 md:text-base"
                       }
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -565,7 +565,7 @@ export default function HeroSlideshow() {
           {relatedAnnouncementUrl && (
             <a
               href={relatedAnnouncementUrl}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-amber-200/70 bg-white px-4 py-2 text-xs font-bold text-black shadow-lg transition-all hover:bg-amber-100"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-xs font-bold text-white shadow-lg transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-xl"
             >
               <ExternalLink className="h-4 w-4" />
               {currentSlide.details_button_label || currentSlide.link_label || "More"}

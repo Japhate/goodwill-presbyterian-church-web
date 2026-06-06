@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
 import { WorshipEvent } from "@/entities/WorshipEvent";
-import { Calendar, Clock, MapPin, Image, CheckCircle, ExternalLink, FileText } from "lucide-react";
+import { Calendar, Check, Clock, Copy, Mail, MapPin, Image, CheckCircle, ExternalLink, FileText, Phone } from "lucide-react";
 import { format, isBefore, startOfDay, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
@@ -120,6 +120,8 @@ const getGoogleCalendarUrl = (item) => {
     item.zoom_link ? `Link: ${item.zoom_link}` : "",
     item.meeting_id ? `Meeting ID: ${item.meeting_id}` : "",
     item.meeting_passcode ? `Passcode: ${item.meeting_passcode}` : "",
+    item.contact_email ? `Contact email: ${item.contact_email}` : "",
+    item.contact_phone ? `Contact phone: ${item.contact_phone}` : "",
     item.directions_url ? `Directions: ${item.directions_url}` : "",
     item.file_upload ? `Attachment: ${item.file_upload}` : "",
   ].filter(Boolean).join("\n\n");
@@ -137,6 +139,7 @@ export default function Updates() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeSection, setActiveSection] = useState("");
   const [now, setNow] = useState(new Date());
+  const [copiedContactId, setCopiedContactId] = useState("");
   const location = useLocation();
   const activeSpecialServiceNotice = getActiveSpecialServiceNotice(now);
   const inPersonOnlyNotice = activeSpecialServiceNotice?.liveStreamAvailable === false ? activeSpecialServiceNotice : null;
@@ -161,6 +164,36 @@ export default function Updates() {
     const interval = window.setInterval(() => setNow(new Date()), 30000);
     return () => window.clearInterval(interval);
   }, []);
+
+  const copyContactValue = async (copyId, value) => {
+    const text = String(value || "").trim();
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedContactId(copyId);
+      window.setTimeout(() => setCopiedContactId((currentId) => (currentId === copyId ? "" : currentId)), 1800);
+    } catch (error) {
+      console.error("Unable to copy contact value:", error);
+      window.alert("Unable to copy this contact information. Please select and copy it manually.");
+    }
+  };
+
+  const renderCopyButton = (copyId, value, label) => {
+    const copied = copiedContactId === copyId;
+    return (
+      <button
+        type="button"
+        onClick={() => copyContactValue(copyId, value)}
+        className="ml-2 inline-flex items-center gap-1 rounded border border-amber-200 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700 transition hover:bg-amber-50"
+        aria-label={`Copy ${label}`}
+        title={copied ? "Copied" : `Copy ${label}`}
+      >
+        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        {copied ? "Copied" : "Copy"}
+      </button>
+    );
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -535,6 +568,24 @@ export default function Updates() {
                         {hasVirtualLocation(item) && item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>}
                         {hasVirtualLocation(item) && item.meeting_id && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Meeting ID:</strong> {item.meeting_id}</span></div>}
                         {hasVirtualLocation(item) && item.meeting_passcode && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Passcode:</strong> {item.meeting_passcode}</span></div>}
+                        {item.contact_email && (
+                          <div className="flex items-start gap-2">
+                            <Mail className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                            <span>
+                              <strong className="font-semibold">Email:</strong> {item.contact_email}
+                              {renderCopyButton(`${item.id || item.title}-email`, item.contact_email, "email")}
+                            </span>
+                          </div>
+                        )}
+                        {item.contact_phone && (
+                          <div className="flex items-start gap-2">
+                            <Phone className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                            <span>
+                              <strong className="font-semibold">Phone:</strong> {item.contact_phone}
+                              {renderCopyButton(`${item.id || item.title}-phone`, item.contact_phone, "phone number")}
+                            </span>
+                          </div>
+                        )}
                         {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="flex flex-wrap gap-2 pt-2">
                             {hasVirtualLocation(item) && item.zoom_link && (
@@ -709,6 +760,24 @@ export default function Updates() {
                           {hasVirtualLocation(item) && item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>}
                           {hasVirtualLocation(item) && item.meeting_id && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Meeting ID:</strong> {item.meeting_id}</span></div>}
                           {hasVirtualLocation(item) && item.meeting_passcode && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Passcode:</strong> {item.meeting_passcode}</span></div>}
+                          {item.contact_email && (
+                            <div className="flex items-start gap-2">
+                              <Mail className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                              <span>
+                                <strong className="font-semibold">Email:</strong> {item.contact_email}
+                                {renderCopyButton(`${item.id || item.title}-past-email`, item.contact_email, "email")}
+                              </span>
+                            </div>
+                          )}
+                          {item.contact_phone && (
+                            <div className="flex items-start gap-2">
+                              <Phone className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                              <span>
+                                <strong className="font-semibold">Phone:</strong> {item.contact_phone}
+                                {renderCopyButton(`${item.id || item.title}-past-phone`, item.contact_phone, "phone number")}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="mt-4 flex flex-wrap gap-2">

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowDown, ArrowUp, CalendarDays, Clock, EyeOff, ExternalLink, GripVertical, Grid2X2, Link, List, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarDays, Clock, EyeOff, ExternalLink, FileText, GripVertical, Grid2X2, Link, List, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 
 function formatDateLabel(value) {
   if (!value) return "";
@@ -41,6 +41,8 @@ function getScheduleDetails(slide, getLinkedAnnouncementForSlide) {
 }
 
 function ScheduleDetails({ slide, getLinkedAnnouncementForSlide, compact = false }) {
+  const linkedAnnouncement = getLinkedAnnouncementForSlide?.(slide) || null;
+  const hasDetailedInformation = Boolean(String(linkedAnnouncement?.content || "").trim());
   const schedule = getScheduleDetails(slide, getLinkedAnnouncementForSlide);
   const dateText = [
     schedule.startDate ? `Start: ${schedule.startDate}` : "",
@@ -51,20 +53,27 @@ function ScheduleDetails({ slide, getLinkedAnnouncementForSlide, compact = false
     schedule.endTime ? `End: ${schedule.endTime}` : "",
   ].filter(Boolean).join(" | ");
 
-  if (!dateText && !timeText) return null;
-
   return (
-    <div className={`min-w-0 space-y-0.5 text-xs leading-tight text-gray-600 ${compact ? "max-w-full" : "shrink-0 text-right"}`}>
-      {dateText && (
-        <div className={`flex items-start gap-1.5 ${compact ? "" : "justify-end"}`}>
-          <CalendarDays className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-700" />
-          <span className="min-w-0">{dateText}</span>
-        </div>
-      )}
-      {timeText && (
-        <div className={`flex items-start gap-1.5 ${compact ? "" : "justify-end"}`}>
-          <Clock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-700" />
-          <span className="min-w-0">{timeText}</span>
+    <div className={`flex min-w-0 items-start gap-1.5 text-xs leading-tight text-gray-600 ${compact ? "max-w-full" : "shrink-0 justify-end text-right"}`}>
+      <FileText
+        className={`mt-0.5 h-3.5 w-3.5 flex-shrink-0 ${hasDetailedInformation ? "text-green-700" : "text-gray-400"}`}
+        aria-label={hasDetailedInformation ? "Detailed information available" : "No detailed information"}
+        title={hasDetailedInformation ? "Detailed information available" : "No detailed information"}
+      />
+      {(dateText || timeText) && (
+        <div className="min-w-0 space-y-0.5">
+          {dateText && (
+            <div className={`flex items-start gap-1.5 ${compact ? "" : "justify-end"}`}>
+              <CalendarDays className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-700" />
+              <span className="min-w-0">{dateText}</span>
+            </div>
+          )}
+          {timeText && (
+            <div className={`flex items-start gap-1.5 ${compact ? "" : "justify-end"}`}>
+              <Clock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-700" />
+              <span className="min-w-0">{timeText}</span>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -297,7 +306,7 @@ function SlideGrid({
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={mode === "hidden" ? "grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" : "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"}>
           {slides.map((slide, index) => (
             <Card
               key={slide.id}
@@ -361,10 +370,10 @@ function SlideGrid({
                   </div>
                 )}
               </div>
-              <CardContent className="space-y-2 p-4">
+              <CardContent className={mode === "hidden" ? "space-y-1.5 p-2.5" : "space-y-2 p-4"}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
-                    <p className="truncate text-sm font-medium text-gray-800">{slide.alt_text || "No description"}</p>
+                    <p className={mode === "hidden" ? "truncate text-xs font-semibold text-gray-800" : "truncate text-sm font-medium text-gray-800"}>{slide.alt_text || "No description"}</p>
                     {slide.link_url ? (
                       <div className="flex items-center gap-1 truncate text-xs text-blue-600">
                         <Link className="h-3 w-3 flex-shrink-0" />
@@ -379,8 +388,8 @@ function SlideGrid({
                   </div>
                   <ScheduleDetails slide={slide} getLinkedAnnouncementForSlide={getLinkedAnnouncementForSlide} />
                 </div>
-                <div className="flex gap-2 pt-1">
-                  <Button size="sm" variant="outline" onClick={() => onEdit(slide)} className="flex-1 gap-1">
+                <div className={mode === "hidden" ? "flex gap-1.5 pt-0.5" : "flex gap-2 pt-1"}>
+                  <Button size="sm" variant="outline" onClick={() => onEdit(slide)} className={mode === "hidden" ? "h-8 flex-1 gap-1 px-2 text-xs" : "flex-1 gap-1"}>
                     <Pencil className="h-3 w-3" /> Edit
                   </Button>
                   {mode === "visible" ? (
@@ -388,12 +397,12 @@ function SlideGrid({
                       <EyeOff className="h-3 w-3" /> Hide
                     </Button>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => onRestore([slide.id])} className="gap-1 border-green-300 text-green-700 hover:bg-green-50">
+                    <Button size="sm" variant="outline" onClick={() => onRestore([slide.id])} className="h-8 gap-1 border-green-300 px-2 text-xs text-green-700 hover:bg-green-50">
                       <RotateCcw className="h-3 w-3" /> Restore
                     </Button>
                   )}
                   {mode === "hidden" && (
-                    <Button size="sm" variant="outline" onClick={() => onDelete(slide.id)} className="border-red-300 text-red-600 hover:bg-red-50">
+                    <Button size="sm" variant="outline" onClick={() => onDelete(slide.id)} className="h-8 border-red-300 px-2 text-red-600 hover:bg-red-50">
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   )}

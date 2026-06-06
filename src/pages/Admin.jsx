@@ -1452,6 +1452,8 @@ export default function AdminPage() {
                     zoom_link: draft.zoom_link || '',
                     meeting_id: draft.meeting_id || '',
                     meeting_passcode: draft.meeting_passcode || '',
+                    contact_email: draft.contact_email || '',
+                    contact_phone: draft.contact_phone || '',
                     directions_url: draft.directions_url || '',
                     file_upload: draft.file_upload || '',
                     file_label: draft.file_label || '',

@@ -24,6 +24,8 @@ const DEFAULT_RELATED_ANNOUNCEMENT = {
   zoom_link: "",
   meeting_id: "",
   meeting_passcode: "",
+  contact_email: "",
+  contact_phone: "",
   directions_url: "",
   file_upload: "",
   file_label: "",
@@ -508,6 +510,24 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                 </div>
               </>
             )}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Contact Email</label>
+              <Input
+                type="email"
+                placeholder="e.g. office@goodwillpresch1867.com"
+                value={relatedAnnouncementDraft.contact_email || ""}
+                onChange={(e) => handleRelatedAnnouncementChange("contact_email", e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Contact Phone</label>
+              <Input
+                type="tel"
+                placeholder="e.g. (803) 555-1234"
+                value={relatedAnnouncementDraft.contact_phone || ""}
+                onChange={(e) => handleRelatedAnnouncementChange("contact_phone", e.target.value)}
+              />
+            </div>
           </div>
             </div>
 
