@@ -9,6 +9,10 @@ import ConfirmedDateTimePicker from "@/components/admin/ConfirmedDateTimePicker"
 const HERO_IMAGE_WIDTH = 1920;
 const HERO_IMAGE_HEIGHT = 760;
 const HERO_IMAGE_QUALITY = 0.82;
+const HERO_IMAGE_MIN_WIDTH = 1400;
+const HERO_IMAGE_MIN_HEIGHT = 550;
+const HERO_IMAGE_ASPECT_RATIO = HERO_IMAGE_WIDTH / HERO_IMAGE_HEIGHT;
+const HERO_IMAGE_ASPECT_TOLERANCE = 0.18;
 const DEFAULT_RELATED_ANNOUNCEMENT = {
   title: "",
   content: "",
@@ -40,18 +44,6 @@ function hasRelatedAnnouncementDraftStarted(draft) {
 
 function getCoverRect(sourceWidth, sourceHeight, targetWidth, targetHeight) {
   const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
-  const width = sourceWidth * scale;
-  const height = sourceHeight * scale;
-  return {
-    x: (targetWidth - width) / 2,
-    y: (targetHeight - height) / 2,
-    width,
-    height,
-  };
-}
-
-function getContainRect(sourceWidth, sourceHeight, targetWidth, targetHeight) {
-  const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
   const width = sourceWidth * scale;
   const height = sourceHeight * scale;
   return {
@@ -98,9 +90,14 @@ function optimizedHeroFileName(fileName) {
 
 async function prepareHeroImageForUpload(file) {
   const image = await loadImageElement(file);
-  if (image.naturalWidth !== HERO_IMAGE_WIDTH || image.naturalHeight !== HERO_IMAGE_HEIGHT) {
+  const imageRatio = image.naturalWidth / image.naturalHeight;
+  const ratioDifference = Math.abs(imageRatio - HERO_IMAGE_ASPECT_RATIO) / HERO_IMAGE_ASPECT_RATIO;
+  const isTooSmall = image.naturalWidth < HERO_IMAGE_MIN_WIDTH || image.naturalHeight < HERO_IMAGE_MIN_HEIGHT;
+  const isWrongShape = ratioDifference > HERO_IMAGE_ASPECT_TOLERANCE;
+
+  if (isTooSmall || isWrongShape) {
     throw new Error(
-      `This image is ${image.naturalWidth}x${image.naturalHeight}. Hero images must be exactly ${HERO_IMAGE_WIDTH}x${HERO_IMAGE_HEIGHT} pixels. Please edit the image to that size and upload it again.`
+      `This image is ${image.naturalWidth}x${image.naturalHeight}. Hero images should be close to the ${HERO_IMAGE_WIDTH}x${HERO_IMAGE_HEIGHT} wide banner shape and at least ${HERO_IMAGE_MIN_WIDTH}x${HERO_IMAGE_MIN_HEIGHT} pixels. Please choose a wider, higher-resolution image.`
     );
   }
 
@@ -112,17 +109,7 @@ async function prepareHeroImageForUpload(file) {
   if (!context) throw new Error("Unable to prepare this hero image.");
 
   const coverRect = getCoverRect(image.naturalWidth, image.naturalHeight, HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT);
-  context.save();
-  context.filter = "blur(28px)";
-  context.globalAlpha = 0.9;
   context.drawImage(image, coverRect.x, coverRect.y, coverRect.width, coverRect.height);
-  context.restore();
-
-  context.fillStyle = "rgba(0, 0, 0, 0.08)";
-  context.fillRect(0, 0, HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT);
-
-  const containRect = getContainRect(image.naturalWidth, image.naturalHeight, HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT);
-  context.drawImage(image, containRect.x, containRect.y, containRect.width, containRect.height);
 
   const blob = await canvasToBlob(canvas, "image/jpeg", HERO_IMAGE_QUALITY);
   return new File([blob], optimizedHeroFileName(file.name), {
@@ -410,7 +397,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
             {validationErrors.image_url && <p className="text-xs font-semibold text-red-600 mt-2">{validationErrors.image_url}</p>}
             {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
             <p className="mt-2 text-xs text-gray-500">
-              Hero images must be exactly 1920x760 pixels. Accepted images are compressed before they are saved.
+              Hero images should be close to a 1920x760 wide banner and at least 1400x550 pixels. Accepted images are cropped, resized to 1920x760, and compressed before they are saved.
             </p>
             {uploadedImages.length > 1 ? (
               <>
