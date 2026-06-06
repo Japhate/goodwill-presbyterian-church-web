@@ -257,6 +257,9 @@ export default function AdminPage() {
   const [signingIn, setSigningIn] = useState(false);
   const [currentAdmin, setCurrentAdmin] = useState(null);
   const [adminProfiles, setAdminProfiles] = useState([]);
+  const [heroFormUnsavedDraft, setHeroFormUnsavedDraft] = useState({ isDirty: false, draft: null });
+  const [pendingAdminTransition, setPendingAdminTransition] = useState(null);
+  const [savingHeroDraft, setSavingHeroDraft] = useState(false);
   const [showPrivacyNotice, setShowPrivacyNotice] = useState(false);
   const [privacyNoticeRead, setPrivacyNoticeRead] = useState(false);
   const [showAdminNamePrompt, setShowAdminNamePrompt] = useState(false);
@@ -270,6 +273,7 @@ export default function AdminPage() {
   const canViewDeveloperPanel = isSiteDeveloperAdmin(currentAdmin);
   const canManageSiteAdmins = isRootSiteDeveloper(currentAdmin);
   const adminRoleLabel = canManageSiteAdmins ? 'Site Developer' : 'Site Admin';
+  const hasUnsavedHeroAnnouncementChanges = ['heroSlide', 'announcement'].includes(formView) && heroFormUnsavedDraft.isDirty;
   const adminSectionOptions = [
     { value: 'worshipEvents', label: 'Calendar of Worship', icon: CalendarHeart, instructions: 'Create and maintain worship services, special observances, dates, times, and worship calendar details.' },
     { value: 'sermons', label: 'Sermons', icon: PlaySquare, instructions: 'Manage sermon recordings, titles, dates, speakers, scripture references, and links for the Sermons page.' },
@@ -284,6 +288,21 @@ export default function AdminPage() {
   const SelectedAdminSectionIcon = selectedAdminSection?.icon || LayoutTemplate;
   const selectedAdminInstructions = selectedAdminSection?.instructions || '';
   const canExpandAdminInstructions = adminInstructionOverflows;
+
+  const requestAdminTransition = (transition) => {
+    if (hasUnsavedHeroAnnouncementChanges) {
+      setPendingAdminTransition(() => transition);
+      return;
+    }
+    transition();
+  };
+
+  const completePendingAdminTransition = () => {
+    const transition = pendingAdminTransition;
+    setPendingAdminTransition(null);
+    setHeroFormUnsavedDraft({ isDirty: false, draft: null });
+    if (typeof transition === 'function') transition();
+  };
 
   const logAdminActivity = async ({
     action,
@@ -560,6 +579,19 @@ export default function AdminPage() {
       window.removeEventListener('resize', checkInstructionOverflow);
     };
   }, [selectedAdminInstructions, adminInstructionExpanded]);
+
+  useEffect(() => {
+    if (!hasUnsavedHeroAnnouncementChanges) return undefined;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+      return '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedHeroAnnouncementChanges]);
 
   useEffect(() => {
     if (!firebaseEnabled || !isAdmin) return undefined;
@@ -1095,13 +1127,19 @@ export default function AdminPage() {
   };
 
   const handleAddNew = (type) => {
-    setEditingItem(null);
-    setFormView(type);
+    requestAdminTransition(() => {
+      setEditingItem(null);
+      setHeroFormUnsavedDraft({ isDirty: false, draft: null });
+      setFormView(type);
+    });
   };
 
   const handleEdit = (item, type) => {
-    setEditingItem(item);
-    setFormView(type);
+    requestAdminTransition(() => {
+      setEditingItem(item);
+      setHeroFormUnsavedDraft({ isDirty: false, draft: null });
+      setFormView(type);
+    });
   };
 
   const handleDelete = async (id, type) => {
@@ -1351,8 +1389,9 @@ export default function AdminPage() {
     }
   };
 
-  const handleFormSubmit = async (formData) => {
+  const handleFormSubmit = async (formData, options = {}) => {
     const isEditing = editingItem && editingItem.id && !editingItem.is_unsaved_fallback;
+    const isDraftSave = options.asDraft === true;
     const logMeta = FORM_LOG_META[formView] || { section: 'Admin Content', itemType: formView || 'item' };
     let savedItemId = isEditing ? editingItem.id : '';
     let savedItemCount = Array.isArray(formData) ? formData.length : 1;
@@ -1544,7 +1583,7 @@ export default function AdminPage() {
         }
 
         await logAdminActivity({
-          action: isEditing ? 'updated' : 'created',
+          action: isDraftSave ? 'saved_draft' : isEditing ? 'updated' : 'created',
           section: logMeta.section,
           itemType: logMeta.itemType,
           itemId: savedItemId,
@@ -1556,18 +1595,46 @@ export default function AdminPage() {
           },
         });
         await refreshDataForType(formView);
+        setHeroFormUnsavedDraft({ isDirty: false, draft: null });
         setFormView(null);
         setEditingItem(null);
+        return true;
 
     } catch (error) {
         console.error("Error in handleFormSubmit:", error);
         window.alert(getSaveErrorMessage(error));
+        return false;
     }
   };
 
   const handleCancelForm = () => {
-    setFormView(null);
-    setEditingItem(null);
+    requestAdminTransition(() => {
+      setFormView(null);
+      setEditingItem(null);
+      setHeroFormUnsavedDraft({ isDirty: false, draft: null });
+    });
+  };
+
+  const handleSavePendingHeroDraft = async () => {
+    if (!heroFormUnsavedDraft.draft) {
+      window.alert('There is nothing draftable to save yet. Add a hero image or announcement details before saving a draft.');
+      return;
+    }
+
+    setSavingHeroDraft(true);
+    try {
+      const saved = await handleFormSubmit(heroFormUnsavedDraft.draft, { asDraft: true });
+      if (saved) {
+        window.alert('Draft saved. It is now in the Inactive Slides & Announcements section and will not show publicly.');
+        completePendingAdminTransition();
+      }
+    } finally {
+      setSavingHeroDraft(false);
+    }
+  };
+
+  const handleDiscardPendingHeroDraft = () => {
+    completePendingAdminTransition();
   };
 
   const handleSignIn = async (event) => {
@@ -2054,6 +2121,7 @@ export default function AdminPage() {
           defaultOrder={nextHeroSlideOrder}
           onSubmit={handleFormSubmit}
           onCancel={handleCancelForm}
+          onUnsavedDraftChange={setHeroFormUnsavedDraft}
           onImageUpload={(upload) => logAdminActivity({
             action: 'uploaded',
             section: 'Hero Slides & Announcements',
@@ -2082,6 +2150,7 @@ export default function AdminPage() {
           defaultOrder={nextHeroSlideOrder}
           onSubmit={handleFormSubmit}
           onCancel={handleCancelForm}
+          onUnsavedDraftChange={setHeroFormUnsavedDraft}
           onImageUpload={(upload) => logAdminActivity({
             action: 'uploaded',
             section: 'Hero Slides & Announcements',
@@ -2326,6 +2395,47 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 pt-1 pb-4">
+      {pendingAdminTransition && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4 py-6" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl">
+            <div className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Unsaved Changes</p>
+              <h2 className="mt-1 text-xl font-bold text-gray-950">Save this as a draft?</h2>
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                You have unsaved changes in this hero slide or announcement. If you save as draft, it will be saved in the
+                <span className="font-semibold text-gray-900"> Inactive Slides & Announcements</span> section and will not show publicly.
+              </p>
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPendingAdminTransition(null)}
+                disabled={savingHeroDraft}
+              >
+                Continue Editing
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDiscardPendingHeroDraft}
+                disabled={savingHeroDraft}
+                className="border-red-200 text-red-700 hover:bg-red-50"
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSavePendingHeroDraft}
+                disabled={savingHeroDraft}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                {savingHeroDraft ? 'Saving Draft...' : 'Save as Draft'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {showAdminNamePrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-5">
           <form onSubmit={handleSaveAdminName} className="w-full max-w-md rounded-lg bg-white p-5 shadow-2xl">
@@ -2451,7 +2561,7 @@ export default function AdminPage() {
                 )}
               </div>
               {firebaseEnabled && (
-                <Button variant="outline" onClick={handleSignOut} className="gap-2 border-amber-200 bg-white hover:bg-amber-50">
+                <Button variant="outline" onClick={() => requestAdminTransition(handleSignOut)} className="gap-2 border-amber-200 bg-white hover:bg-amber-50">
                   <LogOut className="w-4 h-4" /> Sign Out
                 </Button>
               )}
@@ -2492,10 +2602,14 @@ export default function AdminPage() {
                         key={option.value}
                         type="button"
                         onClick={() => {
-                          setView(option.value);
-                          setFormView(null);
-                          setAdminInstructionExpanded(false);
-                          setAdminSectionMenuOpen(false);
+                          requestAdminTransition(() => {
+                            setView(option.value);
+                            setFormView(null);
+                            setEditingItem(null);
+                            setHeroFormUnsavedDraft({ isDirty: false, draft: null });
+                            setAdminInstructionExpanded(false);
+                            setAdminSectionMenuOpen(false);
+                          });
                         }}
                         className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold transition ${isSelected ? 'bg-amber-50 text-amber-800' : 'text-gray-700 hover:bg-gray-50'}`}
                       >

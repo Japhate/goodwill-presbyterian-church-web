@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -141,7 +141,7 @@ function getInitialAnnouncementDraft(announcement) {
   };
 }
 
-export default function HeroSlideForm({ slide, announcement, announcementMode = false, defaultOrder = 0, onSubmit, onCancel, onImageUpload }) {
+export default function HeroSlideForm({ slide, announcement, announcementMode = false, defaultOrder = 0, onSubmit, onCancel, onImageUpload, onUnsavedDraftChange }) {
   const isAnnouncementWorkflow = announcementMode || Boolean(announcement && !slide);
   const isLinkedPairEdit = Boolean(slide?.id && announcement?.id);
   const [formData, setFormData] = useState({
@@ -171,6 +171,23 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
   const [announcementOptions, setAnnouncementOptions] = useState([]);
   const [relatedAnnouncementDraft, setRelatedAnnouncementDraft] = useState(getInitialAnnouncementDraft(announcement));
   const [relatedFileUploading, setRelatedFileUploading] = useState(false);
+  const initialFormSnapshot = useMemo(() => JSON.stringify({
+    formData: {
+      image_url: formData.image_url || "",
+      alt_text: formData.alt_text || "",
+      link_url: formData.link_url || "",
+      link_label: formData.link_label || "",
+      announcement_id: formData.announcement_id || "",
+      is_zoom_bible_study: formData.is_zoom_bible_study === true,
+      is_priority_announcement: formData.is_priority_announcement === true,
+      priority_start: formData.priority_start || "",
+      priority_end: formData.priority_end || "",
+      order: Number(formData.order) || 0,
+      is_active: formData.is_active !== false,
+    },
+    relatedAnnouncementDraft,
+    uploadedImages,
+  }), []);
 
   useEffect(() => {
     let isMounted = true;
@@ -270,9 +287,85 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
     }
   };
 
+  const buildSubmissionPayload = ({ asDraft = false } = {}) => {
+    const order = Number(formData.order);
+    const hasHeroImage = String(formData.image_url || "").trim() !== "";
+    const hasRelatedAnnouncement = hasRelatedAnnouncementDraftStarted(relatedAnnouncementDraft);
+    const relatedAnnouncementPayload = hasRelatedAnnouncement
+      ? { ...relatedAnnouncementDraft, create: true, status: asDraft ? "Hidden" : relatedAnnouncementDraft.status || "Active" }
+      : null;
+    const slideData = {
+      ...(hasRelatedAnnouncement ? { ...formData, announcement_id: "" } : formData),
+      is_active: asDraft ? false : formData.is_active,
+    };
+    const announcementData = {
+      ...relatedAnnouncementDraft,
+      title: String(relatedAnnouncementDraft.title || "").trim() || (asDraft ? "Draft announcement" : ""),
+      content: String(relatedAnnouncementDraft.content || "").trim() || (asDraft ? "Draft saved from the admin panel." : ""),
+      status: asDraft ? "Hidden" : relatedAnnouncementDraft.status || "Active",
+    };
+
+    if (asDraft && !hasHeroImage && !hasRelatedAnnouncement) return null;
+
+    if ((isAnnouncementWorkflow || isLinkedPairEdit) && (hasHeroImage || asDraft)) {
+      return {
+        __hero_with_announcement: hasHeroImage,
+        __announcement_only: !hasHeroImage,
+        announcement: announcementData,
+        slide: hasHeroImage ? {
+          ...slideData,
+          order,
+          announcement_id: announcement?.id || slideData.announcement_id || "",
+        } : undefined,
+      };
+    }
+
+    if (!hasHeroImage) {
+      return {
+        __announcement_only: true,
+        announcement: announcementData,
+      };
+    }
+
+    if (uploadedImages.length > 1) {
+      return uploadedImages.map((imageUrl, index) => ({
+        ...slideData,
+        image_url: imageUrl,
+        order: order + index,
+        related_announcement_draft: index === 0 ? relatedAnnouncementPayload : null,
+      }));
+    }
+
+    return { ...slideData, order, related_announcement_draft: relatedAnnouncementPayload };
+  };
+
+  useEffect(() => {
+    const currentSnapshot = JSON.stringify({
+      formData: {
+        image_url: formData.image_url || "",
+        alt_text: formData.alt_text || "",
+        link_url: formData.link_url || "",
+        link_label: formData.link_label || "",
+        announcement_id: formData.announcement_id || "",
+        is_zoom_bible_study: formData.is_zoom_bible_study === true,
+        is_priority_announcement: formData.is_priority_announcement === true,
+        priority_start: formData.priority_start || "",
+        priority_end: formData.priority_end || "",
+        order: Number(formData.order) || 0,
+        is_active: formData.is_active !== false,
+      },
+      relatedAnnouncementDraft,
+      uploadedImages,
+    });
+    const hasDraftableContent = Boolean(buildSubmissionPayload({ asDraft: true }));
+    onUnsavedDraftChange?.({
+      isDirty: currentSnapshot !== initialFormSnapshot && hasDraftableContent,
+      draft: buildSubmissionPayload({ asDraft: true }),
+    });
+  }, [formData, relatedAnnouncementDraft, uploadedImages, initialFormSnapshot, onUnsavedDraftChange]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    const order = Number(formData.order);
     const nextErrors = {};
 
     const hasHeroImage = String(formData.image_url || "").trim() !== "";
@@ -295,48 +388,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
     setValidationErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    const relatedAnnouncementPayload = hasRelatedAnnouncement
-      ? { ...relatedAnnouncementDraft, create: true }
-      : null;
-    const slideData = hasRelatedAnnouncement ? { ...formData, announcement_id: "" } : formData;
-    const announcementData = {
-      ...relatedAnnouncementDraft,
-      title: String(relatedAnnouncementDraft.title || "").trim(),
-      content: String(relatedAnnouncementDraft.content || "").trim(),
-    };
-
-    if ((isAnnouncementWorkflow || isLinkedPairEdit) && hasHeroImage) {
-      onSubmit({
-        __hero_with_announcement: true,
-        announcement: announcementData,
-        slide: {
-          ...slideData,
-          order,
-          announcement_id: announcement?.id || slideData.announcement_id || "",
-        },
-      });
-      return;
-    }
-
-    if (!hasHeroImage) {
-      onSubmit({
-        __announcement_only: true,
-        announcement: announcementData,
-      });
-      return;
-    }
-
-    if (uploadedImages.length > 1) {
-      onSubmit(uploadedImages.map((imageUrl, index) => ({
-        ...slideData,
-        image_url: imageUrl,
-        order: order + index,
-        related_announcement_draft: index === 0 ? relatedAnnouncementPayload : null,
-      })));
-      return;
-    }
-
-    onSubmit({ ...slideData, order, related_announcement_draft: relatedAnnouncementPayload });
+    onSubmit(buildSubmissionPayload());
   };
 
   return (
