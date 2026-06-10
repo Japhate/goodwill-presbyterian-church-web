@@ -28,7 +28,12 @@ export default function BannerList({ banners, onAddNew, onEdit, onDelete, onDupl
               {banners.map((banner, index) => (
                 <tr key={banner.id} className="border-b hover:bg-gray-50">
                   <td className="p-2">{index + 1}</td>
-                  <td className="p-2 max-w-md truncate">{banner.message}</td>
+                  <td className="p-2 max-w-md">
+                    <p className="truncate">{banner.message}</p>
+                    {banner.is_bible_study_live_banner && (
+                      <p className="mt-1 text-xs font-semibold text-amber-700">Timed Zoom Bible Study banner</p>
+                    )}
+                  </td>
                   <td className="p-2">
                     <Badge className={
                       banner.status === "live" ? "bg-red-500" :

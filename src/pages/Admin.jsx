@@ -32,7 +32,7 @@ import { firebaseAuth, firebaseEnabled } from '@/lib/firebase';
 import { localApi } from '@/api/localApiClient';
 import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
-import { DEFAULT_HOMEPAGE_BANNERS } from '@/lib/homepageBanners';
+import { DEFAULT_HOMEPAGE_BANNERS, LIVE_BIBLE_STUDY_BANNER, LIVE_BIBLE_STUDY_BANNER_MESSAGE } from '@/lib/homepageBanners';
 import { DEFAULT_EMAIL_TEMPLATES, NEWSLETTER_TEMPLATE_IDS } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
 import { Camera, Loader2, ShieldAlert, CalendarHeart, PlaySquare, FileText, MessageSquare, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2, Search, Grid2X2, List, Plus, Info, ChevronDown, EyeOff, RotateCcw, Trash2 } from 'lucide-react';
@@ -729,7 +729,27 @@ export default function AdminPage() {
   const loadBanners = async () => {
     const data = await HomeBannerMessages.list('-created_date', 100);
     if (data.length > 0) {
-      setBanners(data);
+      const preparedBanners = [...data];
+      const liveBibleStudyIndex = preparedBanners.findIndex((banner) =>
+        banner.is_bible_study_live_banner === true || banner.message === LIVE_BIBLE_STUDY_BANNER_MESSAGE
+      );
+
+      if (liveBibleStudyIndex >= 0) {
+        const existingBanner = preparedBanners[liveBibleStudyIndex];
+        if (existingBanner.is_bible_study_live_banner !== true) {
+          const updatedBanner = {
+            ...existingBanner,
+            is_bible_study_live_banner: true,
+          };
+          await HomeBannerMessages.update(existingBanner.id, updatedBanner);
+          preparedBanners[liveBibleStudyIndex] = updatedBanner;
+        }
+      } else {
+        const createdBanner = await HomeBannerMessages.create(LIVE_BIBLE_STUDY_BANNER);
+        preparedBanners.unshift(createdBanner);
+      }
+
+      setBanners(preparedBanners);
       return;
     }
 
@@ -1395,6 +1415,7 @@ export default function AdminPage() {
         if (type === 'banner' && item.message) {
             duplicatedItem.message = `[COPY] ${item.message}`;
             duplicatedItem.status = 'inactive';
+            delete duplicatedItem.is_bible_study_live_banner;
       } else if (item.title) {
           duplicatedItem.title = `[COPY] ${item.title}`;
       }

@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ExternalLink, Video, Clock, Navigation } from "lucide-react";
 import { localApi } from "@/api/localApiClient";
 import { format } from "date-fns";
-import { DEFAULT_HOMEPAGE_BANNER_MESSAGES } from "@/lib/homepageBanners";
+import { DEFAULT_HOMEPAGE_BANNER_MESSAGES, LIVE_BIBLE_STUDY_BANNER_MESSAGE } from "@/lib/homepageBanners";
 import { createSpecialServiceHeroSlide, getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 
 // Fallback slides if no slides are in the database
@@ -135,8 +135,6 @@ const FALLBACK_SLIDES = [
 const SLIDE_INTERVAL = 10000;
 
 const LIVE_SERVICE_BANNER_MESSAGE = "\u{1F534} Our Live service is happening now, click the Live button to join.";
-const LIVE_BIBLE_STUDY_BANNER_MESSAGE = "\u{1F534} Our Zoom Bible Study is happening now. Click the Zoom button to join us.";
-
 // Bible Study: pin the Zoom slide every Wednesday from 6:00 PM to 7:00 PM.
 const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
 const BIBLE_STUDY_START_HOUR = 18; // 6:00 PM
@@ -284,12 +282,17 @@ export default function HeroSlideshow() {
 
   const bannerMessages = useMemo(() => {
     if (activeSpecialServiceNotice) return [activeSpecialServiceNotice.message];
-    if (isLiveBibleStudyTime) return [LIVE_BIBLE_STUDY_BANNER_MESSAGE];
+    if (isLiveBibleStudyTime) {
+      const liveBibleStudyBanner = managedBanners?.find((banner) => banner.is_bible_study_live_banner);
+      if (!liveBibleStudyBanner || liveBibleStudyBanner.status === "active" || liveBibleStudyBanner.status === "live") {
+        return [liveBibleStudyBanner?.message || LIVE_BIBLE_STUDY_BANNER_MESSAGE].filter(Boolean);
+      }
+    }
     if (isLiveServiceBannerTime) return [LIVE_SERVICE_BANNER_MESSAGE];
 
     if (Array.isArray(managedBanners)) {
       const messages = managedBanners
-        .filter((banner) => banner.status === "live" || banner.status === "active")
+        .filter((banner) => !banner.is_bible_study_live_banner && (banner.status === "live" || banner.status === "active"))
         .map((banner) => banner.message)
         .filter(Boolean);
 
