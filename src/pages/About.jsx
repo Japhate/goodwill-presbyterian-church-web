@@ -340,7 +340,7 @@ export default function About() {
                   <div className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
                     <div>
-                      <h4 className="font-semibold text-gray-900">Scripture</h4>
+                      <h4 className="font-semibold text-gray-900">Scripture(s)</h4>
                       <p className="text-gray-600 text-sm">We believe the Bible is God's inspired Word and our ultimate authority for faith and life.</p>
                     </div>
                   </div>

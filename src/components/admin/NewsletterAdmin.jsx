@@ -204,6 +204,7 @@ export default function NewsletterAdmin({
   onSaveBroadcastDraft,
   onScheduleBroadcast,
   onMarkBroadcastSent,
+  onDeleteBroadcast,
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -406,6 +407,26 @@ export default function NewsletterAdmin({
     setSelectedRecipientIds(storedRecipients.length > 0 ? storedRecipients.filter((id) => activeRecipientIds.includes(id)) : activeRecipientIds);
     setBroadcastStatus(`Loaded "${broadcast.subject || "Untitled broadcast"}" for editing.`);
     setBroadcastErrors({});
+  };
+
+  const handleDeleteBroadcast = async (broadcast) => {
+    if (!broadcast?.id || !onDeleteBroadcast) return;
+    const subject = broadcast.subject || "Untitled broadcast";
+    if (!window.confirm(`Delete "${subject}" from broadcast drafts and history? This cannot be undone.`)) return;
+
+    setSavingBroadcast(true);
+    setBroadcastStatus("");
+    try {
+      await onDeleteBroadcast(broadcast.id, broadcast);
+      if (editingBroadcastId === broadcast.id) {
+        resetBroadcastComposer();
+      }
+      setBroadcastStatus(`Deleted "${subject}".`);
+    } catch (error) {
+      setBroadcastStatus(`Broadcast was not deleted: ${error.message}`);
+    } finally {
+      setSavingBroadcast(false);
+    }
   };
 
   const getBroadcastPayload = () => ({
@@ -682,7 +703,7 @@ export default function NewsletterAdmin({
               </div>
             )}
             {broadcastStatus && (
-              <p className={`text-sm font-semibold ${Object.values(broadcastErrors).some(Boolean) || broadcastStatus.includes("not sent") || broadcastStatus.includes("failed") || broadcastStatus.includes("not scheduled") ? "text-red-700" : "text-green-700"}`}>
+              <p className={`text-sm font-semibold ${Object.values(broadcastErrors).some(Boolean) || broadcastStatus.includes("not sent") || broadcastStatus.includes("failed") || broadcastStatus.includes("not scheduled") || broadcastStatus.includes("not deleted") ? "text-red-700" : "text-green-700"}`}>
                 {broadcastStatus}
               </p>
             )}
@@ -752,9 +773,21 @@ export default function NewsletterAdmin({
                     </td>
                     <td className="px-4 py-4 text-xs text-gray-600">{when}</td>
                     <td className="px-4 py-4 text-right">
-                      <Button type="button" variant="outline" size="sm" onClick={() => handleLoadBroadcast(broadcast)} disabled={sendingBroadcast || savingBroadcast}>
-                        Load/Edit
-                      </Button>
+                      <div className="inline-flex items-center gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={() => handleLoadBroadcast(broadcast)} disabled={sendingBroadcast || savingBroadcast}>
+                          Load/Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteBroadcast(broadcast)}
+                          disabled={sendingBroadcast || savingBroadcast}
+                          title="Delete broadcast"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );

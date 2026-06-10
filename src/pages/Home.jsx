@@ -1054,7 +1054,7 @@ export default function Home() {
                 <div className="text-gray-600 text-sm space-y-1.5 mb-4">
                   <p><span className="font-semibold">Speaker:</span> {liveSermon.speaker}</p>
                   <p><span className="font-semibold">Date:</span> {format(parseISO(liveSermon.date), 'MMMM d, yyyy')}</p>
-                  {liveSermon.scripture && <p><span className="font-semibold">Scripture:</span> {liveSermon.scripture}</p>}
+                  {liveSermon.scripture && <p><span className="font-semibold">Scripture(s):</span> {liveSermon.scripture}</p>}
                   {liveSermon.series && <p><span className="font-semibold">Series:</span> {liveSermon.series}</p>}
                 </div>
                 {liveSermon.notes && (
@@ -1125,7 +1125,7 @@ export default function Home() {
                 <div className="text-gray-600 text-sm space-y-0.5 mb-4">
                     <p><span className="font-semibold">Speaker:</span> {latestSermon.speaker}</p>
                     <p><span className="font-semibold">Date:</span> {format(parseISO(latestSermon.date), 'MMMM d, yyyy')}</p>
-                    {latestSermon.scripture && <p><span className="font-semibold">Scripture:</span> {latestSermon.scripture}</p>}
+                    {latestSermon.scripture && <p><span className="font-semibold">Scripture(s):</span> {latestSermon.scripture}</p>}
                     {latestSermon.series && <p><span className="font-semibold">Series:</span> {latestSermon.series}</p>}
                 </div>
                 {latestSermon.notes && (

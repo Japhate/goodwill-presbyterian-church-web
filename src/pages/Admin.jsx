@@ -276,7 +276,7 @@ export default function AdminPage() {
   const hasUnsavedHeroAnnouncementChanges = ['heroSlide', 'announcement'].includes(formView) && heroFormUnsavedDraft.isDirty;
   const adminSectionOptions = [
     { value: 'worshipEvents', label: 'Calendar of Worship', icon: CalendarHeart, instructions: 'Create and maintain worship services, special observances, dates, times, and worship calendar details.' },
-    { value: 'sermons', label: 'Sermons', icon: PlaySquare, instructions: 'Manage sermon recordings, titles, dates, speakers, scripture references, and links for the Sermons page.' },
+    { value: 'sermons', label: 'Sermons', icon: PlaySquare, instructions: 'Manage sermon recordings, titles, dates, speakers, Scripture(s) references, and links for the Sermons page.' },
     { value: 'bulletins', label: 'Worship Bulletins', icon: FileText, instructions: 'Upload and organize worship bulletins so visitors can find current and previous service materials.' },
     { value: 'banners', label: 'Homepage Banner', icon: MessageSquare, instructions: 'Update the homepage banner message used for short, high-visibility notices and welcome information.' },
     { value: 'heroSlides', label: 'Hero Slides & Announcements', icon: LayoutTemplate, instructions: 'Use this section to manage the hero slides shown on the homepage and the announcements shown on the Updates page. You may drag and drop slide cards or use arrows to reorder. Review hidden or inactive slides and announcements, then restore or permanently delete them.' },
@@ -1160,6 +1160,23 @@ export default function AdminPage() {
       itemId: id,
       itemLabel: sentData.subject || '',
       details: { sent_count: sentFields.sent_count, failed_count: sentFields.failed_count },
+    });
+    await loadNewsletterAdmin();
+  };
+
+  const handleDeleteNewsletterBroadcast = async (id, broadcast = {}) => {
+    await NewsletterBroadcasts.delete(id);
+    await logAdminActivity({
+      action: 'deleted',
+      section: 'Newsletter',
+      itemType: 'newsletter broadcast',
+      itemId: id,
+      itemLabel: broadcast.subject || '',
+      details: {
+        status: broadcast.status || 'draft',
+        recipient_count: broadcast.recipient_count || broadcast.recipient_ids?.length || broadcast.sent_count || 0,
+        attachment_count: broadcast.attachments?.length || 0,
+      },
     });
     await loadNewsletterAdmin();
   };
@@ -2399,6 +2416,7 @@ export default function AdminPage() {
           onSaveBroadcastDraft={handleSaveNewsletterBroadcastDraft}
           onScheduleBroadcast={handleScheduleNewsletterBroadcast}
           onMarkBroadcastSent={handleMarkNewsletterBroadcastSent}
+          onDeleteBroadcast={handleDeleteNewsletterBroadcast}
         />;
       case 'developer':
         return canViewDeveloperPanel

@@ -121,7 +121,7 @@ export default function SermonForm({ sermon, onSubmit, onCancel }) {
           <Input id="date" type="date" value={formData.date} onChange={e => handleChange('date', e.target.value)} />
         </div>
         <div>
-          <label htmlFor="scripture" className="block text-sm font-medium text-gray-700 mb-1">Scripture</label>
+          <label htmlFor="scripture" className="block text-sm font-medium text-gray-700 mb-1">Scripture(s)</label>
           <Input id="scripture" value={formData.scripture} onChange={e => handleChange('scripture', e.target.value)} />
         </div>
         <div>

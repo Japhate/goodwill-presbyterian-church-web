@@ -103,6 +103,26 @@ async function deleteBulletinFiles(id, item) {
   }
 }
 
+async function deleteNewsletterBroadcastFiles(id, item) {
+  const attachments = Array.isArray(item.attachments) ? item.attachments : [];
+  if (attachments.length === 0) return;
+
+  const otherBroadcasts = (await collectionItems("NewsletterBroadcasts")).filter((broadcast) => broadcast.id !== id);
+  const otherAttachmentUrls = new Set(
+    otherBroadcasts
+      .flatMap((broadcast) => Array.isArray(broadcast.attachments) ? broadcast.attachments : [])
+      .map((attachment) => attachment?.file_url)
+      .filter(Boolean)
+  );
+
+  await Promise.all(
+    attachments
+      .map((attachment) => attachment?.file_url)
+      .filter((fileUrl) => fileUrl && !otherAttachmentUrls.has(fileUrl))
+      .map((fileUrl) => deleteStoredFile(fileUrl, "newsletter-attachments"))
+  );
+}
+
 function firebaseEntity(entityName) {
   return {
     list: async (sort, limit) => {
@@ -180,13 +200,15 @@ function firebaseEntity(entityName) {
       return { id, ...item };
     },
     delete: async (id) => {
-      if (entityName === "HeroSlide" || entityName === "Bulletins") {
+      if (entityName === "HeroSlide" || entityName === "Bulletins" || entityName === "NewsletterBroadcasts") {
         const itemSnapshot = await getDoc(doc(firestore, entityName, id));
         if (itemSnapshot.exists()) {
           if (entityName === "HeroSlide") {
             await deleteHeroImageFile(itemSnapshot.data());
-          } else {
+          } else if (entityName === "Bulletins") {
             await deleteBulletinFiles(id, itemSnapshot.data());
+          } else {
+            await deleteNewsletterBroadcastFiles(id, itemSnapshot.data());
           }
         }
       }

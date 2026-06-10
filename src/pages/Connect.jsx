@@ -353,7 +353,7 @@ export default function Connect() {
                 {[
                   { icon: '🙏', title: 'Welcome &\nAnnouncements' },
                   { icon: '🎵', title: 'Opening\nWorship' },
-                  { icon: '📖', title: 'Prayer &\nScripture' },
+                  { icon: '📖', title: 'Prayer &\nScripture(s)' },
                   { icon: '💬', title: 'Message from\nGod\'s Word' },
                   { icon: '🤝', title: 'Closing &\nFellowship' }
                 ].map((step, idx) => (

@@ -674,7 +674,7 @@ export default function Resources() {
                             {liveSermon.scripture && (
                               <div className="flex items-start gap-2">
                                 <BookOpen className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                                <p><span className="font-semibold">Scripture:</span> {liveSermon.scripture}</p>
+                                <p><span className="font-semibold">Scripture(s):</span> {liveSermon.scripture}</p>
                               </div>
                             )}
                             {liveSermon.series && (
@@ -945,7 +945,7 @@ export default function Resources() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by title, scripture, speaker, or series..."
+                placeholder="Search by title, Scripture(s), speaker, or series..."
                 value={sermonSearch}
                 onChange={(e) => setSermonSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
@@ -991,7 +991,7 @@ export default function Resources() {
                         <p className="font-semibold text-gray-800 leading-tight mb-2" title={sermon.title}>{sermon.title}</p>
                         {sermon.scripture && (
                           <p className="text-xs text-gray-600 mb-2">
-                            <span className="font-semibold text-gray-700">Scripture Reading(s):</span> {sermon.scripture}
+                            <span className="font-semibold text-gray-700">Scripture(s):</span> {sermon.scripture}
                           </p>
                         )}
                         {sermon.speaker && (
@@ -1034,7 +1034,7 @@ export default function Resources() {
                             <p className="font-semibold text-gray-800 leading-tight truncate">{sermon.title}</p>
                             {sermon.scripture && (
                               <p className="text-xs text-gray-500">
-                                <span className="font-semibold">Scripture Reading(s):</span> {sermon.scripture}
+                                <span className="font-semibold">Scripture(s):</span> {sermon.scripture}
                               </p>
                             )}
                             <p className="text-xs text-amber-700 font-medium">

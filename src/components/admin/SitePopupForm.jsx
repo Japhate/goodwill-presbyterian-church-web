@@ -113,7 +113,7 @@ export default function SitePopupForm({ popup, onSubmit, onCancel }) {
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-gray-700">Scripture / Spiritual Note</label>
+        <label className="mb-1 block text-sm font-semibold text-gray-700">Scripture(s) / Spiritual Note</label>
         <Input value={formData.scripture || ""} onChange={(event) => handleChange("scripture", event.target.value)} placeholder="e.g. Let us consider how to stir up one another to love..." />
       </div>
 
