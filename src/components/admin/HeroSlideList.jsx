@@ -224,7 +224,7 @@ function SlideGrid({
                   </div>
                   <div className="flex aspect-[32/15] w-40 shrink-0 items-center justify-center rounded bg-gray-950 md:w-52">
                     <img
-                      src={slide.image_url}
+                      src={getSlideImageUrl(slide)}
                       alt={slide.alt_text || "Slide"}
                       className="h-full w-full object-contain"
                     />
@@ -319,7 +319,7 @@ function SlideGrid({
               <div className="relative">
                 <div className="flex aspect-[32/15] w-full items-center justify-center bg-gray-950">
                   <img
-                    src={slide.image_url}
+                    src={getSlideImageUrl(slide)}
                     alt={slide.alt_text || "Slide"}
                     className="h-full w-full object-contain"
                   />
@@ -445,6 +445,10 @@ export default function HeroSlideList({
   const [internalSelectedVisibleIds, setInternalSelectedVisibleIds] = useState([]);
   const [internalSelectedHiddenIds, setInternalSelectedHiddenIds] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
+  const getSlideImageUrl = (slide) => {
+    const linkedAnnouncement = getLinkedAnnouncementForSlide?.(slide);
+    return linkedAnnouncement?.image_upload || slide.image_url || "";
+  };
   const selectedVisibleIds = controlledSelectedVisibleIds ?? internalSelectedVisibleIds;
   const selectedHiddenIds = controlledSelectedHiddenIds ?? internalSelectedHiddenIds;
   const setSelectedVisibleIds = (nextSelection) => {

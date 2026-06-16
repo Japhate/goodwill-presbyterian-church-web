@@ -1481,8 +1481,23 @@ export default function AdminPage() {
 
     try {
         const stripEntityId = ({ id: _id, ...data } = {}) => data;
+        const syncAnnouncementImageFromSlide = async (announcementId, imageUrl) => {
+            if (!announcementId || !imageUrl) return;
+            const announcement = announcements.find((item) => String(item.id) === String(announcementId));
+            if (!announcement || announcement.image_upload === imageUrl) return;
+            const { id: _id, ...announcementData } = announcement;
+            await AnnouncementsEvents.update(announcementId, {
+                ...announcementData,
+                image_upload: imageUrl,
+            });
+        };
+
         const saveHeroAnnouncementPair = async (payload) => {
-            const announcementData = stripEntityId(payload.announcement || {});
+            const slideImageUrl = payload.slide?.image_url || "";
+            const announcementData = {
+                ...stripEntityId(payload.announcement || {}),
+                ...(slideImageUrl ? { image_upload: slideImageUrl } : {}),
+            };
             let announcementId = payload.announcement?.id || payload.slide?.announcement_id || '';
 
             if (!announcementId && formView === 'announcement' && isEditing) {
@@ -1642,15 +1657,20 @@ export default function AdminPage() {
                 if (isEditing && Array.isArray(preparedHeroData)) {
                     const [firstSlide, ...additionalSlides] = preparedHeroData;
                     await HeroSlide.update(editingItem.id, firstSlide);
+                    await syncAnnouncementImageFromSlide(firstSlide.announcement_id, firstSlide.image_url);
                     const createdSlides = await Promise.all(additionalSlides.map((slideData) => HeroSlide.create(slideData)));
+                    await Promise.all(additionalSlides.map((slideData) => syncAnnouncementImageFromSlide(slideData.announcement_id, slideData.image_url)));
                     savedItemId = [editingItem.id, ...createdSlides.map((slide) => slide?.id)].filter(Boolean).join(', ');
                 } else if (isEditing) {
                     await HeroSlide.update(editingItem.id, preparedHeroData);
+                    await syncAnnouncementImageFromSlide(preparedHeroData.announcement_id, preparedHeroData.image_url);
                 } else if (Array.isArray(preparedHeroData)) {
                     const createdSlides = await Promise.all(preparedHeroData.map((slideData) => HeroSlide.create(slideData)));
+                    await Promise.all(preparedHeroData.map((slideData) => syncAnnouncementImageFromSlide(slideData.announcement_id, slideData.image_url)));
                     savedItemId = createdSlides.map((slide) => slide?.id).filter(Boolean).join(', ');
                 } else {
                     const created = await HeroSlide.create(preparedHeroData);
+                    await syncAnnouncementImageFromSlide(preparedHeroData.announcement_id, preparedHeroData.image_url);
                     savedItemId = created?.id || '';
                 }
                 formData = preparedHeroData;

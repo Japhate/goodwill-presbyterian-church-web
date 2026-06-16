@@ -268,6 +268,7 @@ function ZoomCountdownOverlay() {
 
 export default function HeroSlideshow({ onReady }) {
   const [slides, setSlides] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const [managedBanners, setManagedBanners] = useState(null);
   const [current, setCurrent] = useState(0);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
@@ -320,7 +321,11 @@ export default function HeroSlideshow({ onReady }) {
   useEffect(() => {
     const loadSlides = async () => {
       try {
-        const data = await localApi.entities.HeroSlide.list('order', 50);
+        const [data, announcementData] = await Promise.all([
+          localApi.entities.HeroSlide.list('order', 50),
+          localApi.entities.AnnouncementsEvents.list('-created_date', 200).catch(() => []),
+        ]);
+        setAnnouncements(Array.isArray(announcementData) ? announcementData : []);
         const active = data.filter(s => s.is_active !== false);
         if (active.length > 0) {
           setSlides(active);
@@ -328,6 +333,7 @@ export default function HeroSlideshow({ onReady }) {
           setSlides(FALLBACK_SLIDES);
         }
       } catch {
+        setAnnouncements([]);
         setSlides(FALLBACK_SLIDES);
       }
     };
@@ -380,8 +386,14 @@ export default function HeroSlideshow({ onReady }) {
   const nextSlide = activeSlides.length > 1
     ? activeSlides[(current + 1) % activeSlides.length]
     : null;
-  const currentImageUrl = currentSlide?.image_url;
-  const nextImageUrl = nextSlide?.image_url;
+  const getLinkedAnnouncementImage = (slide) => {
+    if (!slide?.announcement_id) return "";
+    const announcement = announcements.find((item) => String(item.id) === String(slide.announcement_id));
+    return announcement?.image_upload || "";
+  };
+  const getSlideImageUrl = (slide) => getLinkedAnnouncementImage(slide) || slide?.image_url || "";
+  const currentImageUrl = getSlideImageUrl(currentSlide);
+  const nextImageUrl = getSlideImageUrl(nextSlide);
   const isPermanentWelcomeHero = isPermanentWelcomeHeroSlide(currentSlide);
   const welcomeHeroUrl = isPermanentWelcomeHero ? ABOUT_PAGE_URL : "";
   const relatedAnnouncementUrl = !isPermanentWelcomeHero && currentSlide?.announcement_id
