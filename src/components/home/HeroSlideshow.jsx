@@ -412,15 +412,19 @@ export default function HeroSlideshow({ onReady }) {
   const nextSlide = activeSlides.length > 1
     ? activeSlides[(current + 1) % activeSlides.length]
     : null;
-  const getLinkedAnnouncementImage = (slide) => {
+  const getLinkedAnnouncement = (slide) => {
     if (!slide?.announcement_id) return "";
     if (failedAnnouncementImageIds.has(String(slide.announcement_id))) return "";
-    const announcement = announcements.find((item) => String(item.id) === String(slide.announcement_id));
+    return announcements.find((item) => String(item.id) === String(slide.announcement_id)) || null;
+  };
+  const getLinkedAnnouncementImage = (slide) => {
+    const announcement = getLinkedAnnouncement(slide);
     return announcement?.image_upload || "";
   };
   const getSlideImageUrl = (slide) => getLinkedAnnouncementImage(slide) || slide?.image_url || "";
   const currentImageUrl = getSlideImageUrl(currentSlide);
   const nextImageUrl = getSlideImageUrl(nextSlide);
+  const linkedAnnouncement = getLinkedAnnouncement(currentSlide);
   const isPermanentWelcomeHero = isPermanentWelcomeHeroSlide(currentSlide);
   const isFirstLandingSlide = current === 0 && !currentSlide?.is_priority_announcement && !isZoomBibleStudySlide(currentSlide);
   const showWelcomeHeroIntro = isPermanentWelcomeHero || isFirstLandingSlide;
@@ -428,12 +432,19 @@ export default function HeroSlideshow({ onReady }) {
   const relatedAnnouncementUrl = !isPermanentWelcomeHero && currentSlide?.announcement_id
     ? `/Updates#announcement-${currentSlide.announcement_id}`
     : "";
+  const linkedLocationType = linkedAnnouncement?.location_type || "physical";
+  const linkedDirectionsUrl = String(linkedAnnouncement?.directions_url || "").trim();
+  const linkedPhysicalLocation = String(linkedAnnouncement?.location || "").trim();
+  const directionsSlideUrl = ["physical", "both"].includes(linkedLocationType) && linkedPhysicalLocation && linkedDirectionsUrl
+    ? linkedDirectionsUrl
+    : "";
   const explicitSlideUrl = currentSlide?.link_url || "";
   const isExplicitExternalUrl = /^https?:\/\//i.test(explicitSlideUrl);
   const internalSlideUrl = !welcomeHeroUrl && explicitSlideUrl.startsWith("/") ? explicitSlideUrl : "";
   const externalSlideUrl = isExplicitExternalUrl
     ? explicitSlideUrl
-    : isZoomBibleStudySlide(currentSlide) ? BIBLE_STUDY_ZOOM : "";
+    : directionsSlideUrl || (isZoomBibleStudySlide(currentSlide) ? BIBLE_STUDY_ZOOM : "");
+  const isDirectionsSlideButton = Boolean(directionsSlideUrl && externalSlideUrl === directionsSlideUrl);
   const showExternalSlideButton = SHOW_HERO_EXTERNAL_ACTION_BUTTON && Boolean(externalSlideUrl);
   const primarySlideUrl = welcomeHeroUrl || relatedAnnouncementUrl || internalSlideUrl || externalSlideUrl;
   const primarySlideIsExternal = Boolean(primarySlideUrl && primarySlideUrl === externalSlideUrl && isExplicitExternalUrl);
@@ -755,12 +766,12 @@ export default function HeroSlideshow({ onReady }) {
                       }
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {currentSlide.is_priority_announcement ? (
+                      {currentSlide.is_priority_announcement || isDirectionsSlideButton ? (
                         <Navigation className="w-4 h-4" />
                       ) : (
                         <ExternalLink className="w-4 h-4" />
                       )}
-                      {currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "More")}
+                      {isDirectionsSlideButton ? "Get Directions" : currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "More")}
                     </a>
                   )}
                 </div>
@@ -802,7 +813,7 @@ export default function HeroSlideshow({ onReady }) {
               className="inline-flex items-center justify-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500 px-4 py-2 text-xs font-bold text-black shadow-lg transition-all hover:bg-amber-400"
             >
               <Navigation className="h-4 w-4" />
-              {currentSlide.link_label || "Get Directions"}
+              {isDirectionsSlideButton ? "Get Directions" : currentSlide.link_label || "Get Directions"}
             </a>
           )}
         </div>

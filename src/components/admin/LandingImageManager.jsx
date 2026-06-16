@@ -106,7 +106,7 @@ export default function LandingImageManager({ landingImage, onSaved }) {
             Landing Image
           </h3>
           <p className="mt-1 max-w-3xl text-sm text-gray-600">
-            This controls the special first hero image with the welcome text. It is stored separately and uploaded without the hero-slide optimization used for regular slides.
+            This is the first image that users see when they visit the website.
           </p>
         </div>
         <Button type="button" onClick={handleSave} disabled={isSaving} className="gap-2 bg-amber-600 hover:bg-amber-700">
