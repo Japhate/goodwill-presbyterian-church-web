@@ -198,6 +198,20 @@ function normalizeMatchText(value) {
     .trim();
 }
 
+function getVirtualJoinLabel(platform) {
+  const cleanPlatform = String(platform || "").trim();
+  if (!cleanPlatform) return "Join Online";
+
+  const normalizedPlatform = cleanPlatform.toLowerCase();
+  if (normalizedPlatform.includes("zoom")) return "Join Zoom";
+  if (normalizedPlatform.includes("google") || normalizedPlatform.includes("meet")) return "Join Google Meet";
+  if (normalizedPlatform.includes("teams")) return "Join Microsoft Teams";
+  if (normalizedPlatform.includes("youtube")) return "Watch on YouTube";
+  if (normalizedPlatform.includes("facebook")) return "Watch on Facebook";
+
+  return `Join ${cleanPlatform}`;
+}
+
 // Get this Wednesday's (or next Wednesday's) Bible Study times
 function getNextBibleStudy(now) {
   const d = new Date(now);
@@ -462,14 +476,40 @@ export default function HeroSlideshow({ onReady }) {
   const directionsSlideUrl = ["physical", "both"].includes(linkedLocationType) && linkedPhysicalLocation && linkedDirectionsUrl
     ? linkedDirectionsUrl
     : "";
+  const linkedVirtualPlatform = String(currentSlide?.virtual_platform || linkedAnnouncement?.virtual_platform || "").trim();
+  const linkedVirtualUrl = String(currentSlide?.zoom_link || linkedAnnouncement?.zoom_link || "").trim();
+  const virtualSlideUrl = ["virtual", "both"].includes(linkedLocationType) && linkedVirtualPlatform && linkedVirtualUrl
+    ? linkedVirtualUrl
+    : "";
   const explicitSlideUrl = currentSlide?.link_url || "";
   const isExplicitExternalUrl = /^https?:\/\//i.test(explicitSlideUrl);
   const internalSlideUrl = !welcomeHeroUrl && explicitSlideUrl.startsWith("/") ? explicitSlideUrl : "";
-  const externalSlideUrl = isExplicitExternalUrl
-    ? explicitSlideUrl
-    : directionsSlideUrl || (isZoomBibleStudySlide(currentSlide) ? BIBLE_STUDY_ZOOM : "");
-  const isDirectionsSlideButton = Boolean(directionsSlideUrl && externalSlideUrl === directionsSlideUrl);
-  const showExternalSlideButton = SHOW_HERO_EXTERNAL_ACTION_BUTTON && Boolean(externalSlideUrl);
+  const externalActionButtons = SHOW_HERO_EXTERNAL_ACTION_BUTTON
+    ? [
+        directionsSlideUrl && {
+          url: directionsSlideUrl,
+          label: "Get Directions",
+          type: "directions",
+        },
+        virtualSlideUrl && {
+          url: virtualSlideUrl,
+          label: getVirtualJoinLabel(linkedVirtualPlatform),
+          type: "virtual",
+        },
+        isExplicitExternalUrl && {
+          url: explicitSlideUrl,
+          label: currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "More"),
+          type: isZoomBibleStudySlide(currentSlide) ? "virtual" : "external",
+        },
+        !isExplicitExternalUrl && !directionsSlideUrl && !virtualSlideUrl && isZoomBibleStudySlide(currentSlide) && {
+          url: BIBLE_STUDY_ZOOM,
+          label: "Join Zoom",
+          type: "virtual",
+        },
+      ].filter(Boolean)
+    : [];
+  const externalSlideUrl = externalActionButtons[0]?.url || "";
+  const showExternalSlideButton = externalActionButtons.length > 0;
   const primarySlideUrl = welcomeHeroUrl || relatedAnnouncementUrl || internalSlideUrl || externalSlideUrl;
   const primarySlideIsExternal = Boolean(primarySlideUrl && primarySlideUrl === externalSlideUrl && isExplicitExternalUrl);
 
@@ -778,26 +818,29 @@ export default function HeroSlideshow({ onReady }) {
                       {currentSlide.link_label || "Learn More"}
                     </a>
                   )}
-                  {showExternalSlideButton && (
+                  {externalActionButtons.map((button) => (
                     <a
-                      href={externalSlideUrl}
+                      key={`${button.type}-${button.url}`}
+                      href={button.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={
-                        currentSlide.is_priority_announcement
-                          ? "inline-flex items-center gap-1.5 rounded-xl border border-amber-200/70 bg-amber-500/95 px-6 py-3 text-base font-bold text-black shadow-lg transition-all hover:-translate-y-0.5 hover:rounded-2xl hover:bg-amber-400 hover:shadow-xl"
-                          : "inline-flex items-center gap-1.5 rounded-lg bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:rounded-xl hover:bg-blue-700 hover:shadow-xl sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:rounded-xl md:px-6 md:py-3 md:text-base"
+                        button.type === "directions"
+                          ? "inline-flex items-center gap-1.5 rounded-lg border border-amber-100/80 bg-gradient-to-r from-[#b87918] via-[#f3c45b] to-[#c58a1f] px-3 py-1.5 text-xs font-bold text-[#2d1c12] shadow-[0_10px_26px_rgba(0,0,0,0.26),0_0_18px_rgba(243,196,91,0.22)] ring-1 ring-white/25 transition-all hover:-translate-y-0.5 hover:rounded-xl hover:from-[#f4cc69] hover:via-[#fff0a8] hover:to-[#c58a1f] hover:shadow-[0_14px_32px_rgba(0,0,0,0.34),0_0_26px_rgba(243,196,91,0.36)] sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:rounded-xl md:px-6 md:py-3 md:text-base"
+                          : "inline-flex items-center gap-1.5 rounded-lg border border-blue-200/50 bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:rounded-xl hover:bg-blue-700 hover:shadow-xl sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:rounded-xl md:px-6 md:py-3 md:text-base"
                       }
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {currentSlide.is_priority_announcement || isDirectionsSlideButton ? (
+                      {button.type === "directions" ? (
                         <Navigation className="w-4 h-4" />
+                      ) : button.type === "virtual" ? (
+                        <Video className="w-4 h-4" />
                       ) : (
                         <ExternalLink className="w-4 h-4" />
                       )}
-                      {isDirectionsSlideButton ? "Get Directions" : currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "More")}
+                      {button.label}
                     </a>
-                  )}
+                  ))}
                 </div>
               )}
             </motion.div>
@@ -829,17 +872,26 @@ export default function HeroSlideshow({ onReady }) {
               {currentSlide.details_button_label || currentSlide.link_label || "More"}
             </a>
           )}
-          {showExternalSlideButton && (
+          {externalActionButtons.map((button) => (
             <a
-              href={externalSlideUrl}
+              key={`${button.type}-${button.url}-mobile`}
+              href={button.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500 px-4 py-2 text-xs font-bold text-black shadow-lg transition-all hover:bg-amber-400"
+              className={
+                button.type === "directions"
+                  ? "inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-100/80 bg-gradient-to-r from-[#b87918] via-[#f3c45b] to-[#c58a1f] px-4 py-2 text-xs font-bold text-[#2d1c12] shadow-lg ring-1 ring-white/25 transition-all hover:bg-amber-400"
+                  : "inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-200/70 bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-lg transition-all hover:bg-blue-700"
+              }
             >
-              <Navigation className="h-4 w-4" />
-              {isDirectionsSlideButton ? "Get Directions" : currentSlide.link_label || "Get Directions"}
+              {button.type === "directions" ? (
+                <Navigation className="h-4 w-4" />
+              ) : (
+                <Video className="h-4 w-4" />
+              )}
+              {button.label}
             </a>
-          )}
+          ))}
         </div>
       )}
 
