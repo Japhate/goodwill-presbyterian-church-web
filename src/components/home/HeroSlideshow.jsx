@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, ChevronLeft, ChevronRight, ExternalLink, Video, Clock, Navigation } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, ExternalLink, Video, Clock, Navigation } from "lucide-react";
 import { localApi } from "@/api/localApiClient";
 import { format } from "date-fns";
 import { DEFAULT_HOMEPAGE_BANNER_MESSAGES, LIVE_BIBLE_STUDY_BANNER_MESSAGE } from "@/lib/homepageBanners";
@@ -679,28 +679,33 @@ export default function HeroSlideshow({ onReady }) {
                 onError={handleCurrentImageError}
               />
               {showWelcomeHeroIntro && (
-                <div className="pointer-events-none absolute inset-0 z-[25] flex items-center justify-start bg-gradient-to-r from-black/80 via-black/42 to-transparent px-6 text-left sm:px-10 md:px-14">
-                  <div className="welcome-hero-copy ml-[5vw] max-w-[min(78vw,720px)] sm:ml-[8vw] md:ml-[10vw] lg:ml-[12vw]">
+                <div className="pointer-events-none absolute inset-0 z-[25] flex items-center justify-start bg-gradient-to-r from-black/72 via-black/34 to-transparent px-4 text-left sm:px-8 md:px-14">
+                  <div className="welcome-hero-copy ml-[3vw] max-w-[min(68vw,620px)] sm:ml-[6vw] sm:max-w-[min(64vw,660px)] md:ml-[10vw] md:max-w-[min(78vw,720px)] lg:ml-[12vw]">
                     <p
-                      className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-amber-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] sm:text-sm md:mb-3 md:text-base"
+                      className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] sm:text-xs md:mb-3 md:text-base"
                     >
                       Welcome to
                     </p>
                     <h1
-                      className="text-balance font-serif text-3xl font-bold leading-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)] sm:text-5xl md:text-6xl lg:text-7xl"
+                      className="text-balance font-serif text-[clamp(2rem,8.2vw,3rem)] font-bold leading-[0.98] text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)] sm:text-[clamp(2.25rem,5.4vw,3.25rem)] md:text-6xl md:leading-tight lg:text-7xl"
                     >
                       Goodwill Presbyterian Church, USA
                     </h1>
-                    <div className="welcome-hero-line mt-3 h-px w-32 origin-left bg-gradient-to-r from-amber-200 via-white/70 to-transparent sm:w-48 md:mt-5" />
+                    <div className="welcome-hero-line mt-2 h-px w-24 origin-left bg-gradient-to-r from-amber-200 via-white/70 to-transparent sm:w-36 md:mt-5 md:w-48" />
                     {welcomeHeroUrl && (
-                      <a
-                        href={welcomeHeroUrl}
-                        className="welcome-hero-cta pointer-events-auto group relative mt-5 inline-flex items-center gap-2 overflow-hidden rounded-full border border-amber-100/80 bg-gradient-to-r from-[#c58a1f] via-[#f3c45b] to-[#b87918] px-5 py-2.5 text-sm font-bold text-[#2d1c12] shadow-[0_14px_36px_rgba(0,0,0,0.35),0_0_28px_rgba(243,196,91,0.28)] ring-1 ring-white/30 transition-all duration-500 hover:-translate-y-0.5 hover:scale-[1.03] hover:from-[#f4cc69] hover:via-[#fff0a8] hover:to-[#c58a1f] hover:shadow-[0_18px_42px_rgba(0,0,0,0.42),0_0_38px_rgba(243,196,91,0.45)] focus:outline-none focus:ring-4 focus:ring-amber-200/55 md:mt-7 md:px-6 md:py-3 md:text-base"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <span className="relative z-10">{currentSlide.link_label || "Learn More"}</span>
-                        <ArrowRight className="relative z-10 h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 md:h-5 md:w-5" />
-                      </a>
+                      <div className="mt-3 flex flex-wrap items-stretch gap-2 sm:mt-4 sm:gap-3 md:mt-7 md:gap-4">
+                        <span className="pointer-events-none inline-flex items-center font-serif text-lg font-semibold italic leading-none text-amber-100 drop-shadow-[0_4px_12px_rgba(0,0,0,0.75)] sm:text-xl md:text-3xl">
+                          New Here?
+                        </span>
+                        <a
+                          href={welcomeHeroUrl}
+                          className="welcome-hero-cta pointer-events-auto group relative inline-flex min-w-[8.75rem] items-center justify-between gap-3 overflow-hidden rounded-xl border border-amber-100/80 bg-gradient-to-r from-[#c58a1f] via-[#f3c45b] to-[#b87918] px-4 py-2 text-xs font-bold text-[#2d1c12] shadow-[0_14px_36px_rgba(0,0,0,0.35),0_0_28px_rgba(243,196,91,0.28)] ring-1 ring-white/30 transition-all duration-500 hover:-translate-y-0.5 hover:scale-[1.03] hover:rounded-2xl hover:from-[#f4cc69] hover:via-[#fff0a8] hover:to-[#c58a1f] hover:shadow-[0_18px_42px_rgba(0,0,0,0.42),0_0_38px_rgba(243,196,91,0.45)] focus:outline-none focus:ring-4 focus:ring-amber-200/55 sm:min-w-[9.75rem] sm:px-5 sm:py-2.5 sm:text-sm md:min-w-[11rem] md:px-6 md:py-3 md:text-base"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <span className="relative z-10">{currentSlide.link_label || "Learn More"}</span>
+                          <ArrowUpRight className="relative z-10 h-4 w-4 shrink-0 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 md:h-5 md:w-5" />
+                        </a>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -719,8 +724,8 @@ export default function HeroSlideshow({ onReady }) {
                       href={relatedAnnouncementUrl}
                       className={
                         currentSlide.is_priority_announcement
-                          ? "inline-flex items-center gap-1 rounded-full border border-white/45 bg-white/5 px-3.5 py-1.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-white hover:shadow-xl md:px-4 md:py-2 md:text-base"
-                          : "inline-flex items-center gap-1 rounded-full border border-white/45 bg-white/5 px-2.5 py-1 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-white hover:shadow-xl sm:px-3 sm:py-1.5 sm:text-sm md:px-4 md:py-2 md:text-base"
+                          ? "inline-flex items-center gap-1 rounded-xl border border-white/45 bg-white/5 px-3.5 py-1.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:-translate-y-0.5 hover:rounded-2xl hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-white hover:shadow-xl md:px-4 md:py-2 md:text-base"
+                          : "inline-flex items-center gap-1 rounded-lg border border-white/45 bg-white/5 px-2.5 py-1 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:-translate-y-0.5 hover:rounded-xl hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-white hover:shadow-xl sm:px-3 sm:py-1.5 sm:text-sm md:rounded-xl md:px-4 md:py-2 md:text-base"
                       }
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -731,7 +736,7 @@ export default function HeroSlideshow({ onReady }) {
                   {welcomeHeroUrl && (
                     <a
                       href={welcomeHeroUrl}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-white/10 px-3.5 py-1.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-white hover:shadow-xl sm:px-4 sm:py-2 md:px-5 md:py-2.5 md:text-base"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-white/50 bg-white/10 px-3.5 py-1.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:-translate-y-0.5 hover:rounded-2xl hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-white hover:shadow-xl sm:px-4 sm:py-2 md:px-5 md:py-2.5 md:text-base"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <ArrowRight className="h-4 w-4" />
@@ -745,8 +750,8 @@ export default function HeroSlideshow({ onReady }) {
                       rel="noopener noreferrer"
                       className={
                         currentSlide.is_priority_announcement
-                          ? "inline-flex items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500/95 px-6 py-3 text-base font-bold text-black shadow-lg transition-all hover:bg-amber-400"
-                          : "inline-flex items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:px-6 md:py-3 md:text-base"
+                          ? "inline-flex items-center gap-1.5 rounded-xl border border-amber-200/70 bg-amber-500/95 px-6 py-3 text-base font-bold text-black shadow-lg transition-all hover:-translate-y-0.5 hover:rounded-2xl hover:bg-amber-400 hover:shadow-xl"
+                          : "inline-flex items-center gap-1.5 rounded-lg bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:rounded-xl hover:bg-blue-700 hover:shadow-xl sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:rounded-xl md:px-6 md:py-3 md:text-base"
                       }
                       onClick={(e) => e.stopPropagation()}
                     >
