@@ -5,12 +5,34 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import ConfirmedDateTimePicker from "@/components/admin/ConfirmedDateTimePicker";
+
+const MONTH_GROUPS = [
+  "Ongoing Events",
+  "May 2026",
+  "June 2026",
+  "July 2026",
+  "August 2026",
+  "September 2026",
+  "October 2026",
+  "November 2026",
+  "December 2026",
+];
+
+const getMonthGroupFromDate = (dateValue) => {
+  if (!dateValue) return "";
+  const [year, month] = String(dateValue).split("-").map(Number);
+  if (!year || !month) return "";
+  return new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+};
 
 export default function WorshipEventForm({ event, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(event || {
     title: "",
     event_date: "",
-    month_group: "November 2025",
+    event_time: "",
+    end_time: "",
+    month_group: "Ongoing Events",
     description: "",
     is_completed: false
   });
@@ -30,7 +52,8 @@ export default function WorshipEventForm({ event, onSubmit, onCancel }) {
   const handleChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: value,
+      ...(field === "event_date" && prev.month_group !== "Ongoing Events" ? { month_group: getMonthGroupFromDate(value) || prev.month_group } : {}),
     }));
     setValidationErrors(prev => ({ ...prev, [field]: "" }));
   };
@@ -61,17 +84,34 @@ export default function WorshipEventForm({ event, onSubmit, onCancel }) {
             {validationErrors.title && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.title}</p>}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Event Date<span className="ml-1 text-red-600">*</span>
-            </label>
-            <Input
-              type="date"
-              value={formData.event_date}
-              onChange={(e) => handleChange("event_date", e.target.value)}
-              className={validationErrors.event_date ? "border-red-500 focus-visible:ring-red-500" : ""}
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <ConfirmedDateTimePicker
+                id="worship_event_date"
+                label={<>Event Date<span className="ml-1 text-red-600">*</span></>}
+                type="date"
+                value={formData.event_date}
+                onChange={(value) => handleChange("event_date", value)}
+                placeholder="Choose date"
+              />
+              {validationErrors.event_date && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.event_date}</p>}
+            </div>
+            <ConfirmedDateTimePicker
+              id="worship_event_time"
+              label="Start Time"
+              type="time"
+              value={formData.event_time}
+              onChange={(value) => handleChange("event_time", value)}
+              placeholder="Choose time"
             />
-            {validationErrors.event_date && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.event_date}</p>}
+            <ConfirmedDateTimePicker
+              id="worship_event_end_time"
+              label="End Time"
+              type="time"
+              value={formData.end_time}
+              onChange={(value) => handleChange("end_time", value)}
+              placeholder="Choose time"
+            />
           </div>
 
           <div>
@@ -86,10 +126,9 @@ export default function WorshipEventForm({ event, onSubmit, onCancel }) {
                 <SelectValue placeholder="Select month group" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Ongoing Events">Ongoing Events</SelectItem>
-                <SelectItem value="October 2025">October 2025</SelectItem>
-                <SelectItem value="November 2025">November 2025</SelectItem>
-                <SelectItem value="December 2025">December 2025</SelectItem>
+                {Array.from(new Set([...(MONTH_GROUPS.includes(formData.month_group) ? [] : [formData.month_group]), ...MONTH_GROUPS].filter(Boolean))).map((monthGroup) => (
+                  <SelectItem key={monthGroup} value={monthGroup}>{monthGroup}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             {validationErrors.month_group && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.month_group}</p>}

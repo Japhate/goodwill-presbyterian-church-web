@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "id": "worship-sunday-morning",
+    "title": "Sunday Morning Worship",
+    "event_date": "2026-05-24",
+    "event_time": "10:30",
+    "end_time": "12:00",
+    "month_group": "Ongoing Events",
+    "description": "Every Sunday at 10:30 AM for worship at Goodwill Presbyterian Church.",
+    "is_completed": false,
+    "source_announcement_id": "announcement-1",
+    "created_date": "2026-05-01T12:00:00.000Z"
+  },
+  {
+    "id": "worship-wednesday-bible-study",
+    "title": "Wednesday Bible Study",
+    "event_date": "2026-05-27",
+    "event_time": "18:30",
+    "end_time": "19:00",
+    "month_group": "Ongoing Events",
+    "description": "Weekly Zoom Bible Study begins at 6:30 PM.",
+    "is_completed": false,
+    "source_announcement_id": "announcement-2",
+    "created_date": "2026-05-02T12:00:00.000Z"
+  },
+  {
+    "id": "worship-thanksgiving-recognition",
+    "title": "Celebrations, Accomplishments & Thanksgiving Recognition",
+    "event_date": "2026-05-29",
+    "event_time": "",
+    "end_time": "",
+    "month_group": "May 2026",
+    "description": "Submit photographs and announcements recognizing graduations, academic honors, awards, and other thanksgiving recognitions by Thursday, May 29, 2026.",
+    "is_completed": true,
+    "source_announcement_id": "celebrations-accomplishments-thanksgiving-recognition",
+    "created_date": "2026-05-03T12:00:00.000Z"
+  }
+]

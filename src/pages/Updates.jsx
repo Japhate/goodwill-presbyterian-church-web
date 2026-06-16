@@ -264,14 +264,15 @@ export default function Updates() {
   }, [upcomingAndUndatedEvents, activeCategory]);
 
   const groupedEvents = React.useMemo(() => {
-    const monthOrder = ["Ongoing Events", "October 2025", "November 2025", "December 2025", "January 2026", "February 2026"];
+    const getMonthSortValue = (monthGroup = "") => {
+      if (monthGroup === "Ongoing Events") return -1;
+      const parsedMonth = new Date(`${monthGroup} 1`);
+      return Number.isNaN(parsedMonth.getTime()) ? Number.MAX_SAFE_INTEGER : parsedMonth.getTime();
+    };
 
     const sortedEvents = [...worshipEvents].sort((a, b) => {
-      const monthIndexA = monthOrder.indexOf(a.month_group);
-      const monthIndexB = monthOrder.indexOf(b.month_group);
-      if (monthIndexA !== monthIndexB) {
-        return monthIndexA - monthIndexB;
-      }
+      const monthSort = getMonthSortValue(a.month_group) - getMonthSortValue(b.month_group);
+      if (monthSort !== 0) return monthSort;
       const dateA = parseDateAsLocal(a.event_date);
       const dateB = parseDateAsLocal(b.event_date);
       if (dateA && dateB) return dateA.getTime() - dateB.getTime();
@@ -280,7 +281,7 @@ export default function Updates() {
       return 0;
     });
 
-    return groupBy(sortedEvents, 'month_group');
+    return groupBy(sortedEvents, (event) => event.month_group || "Unscheduled");
   }, [worshipEvents]);
 
   const categories = {
@@ -527,7 +528,7 @@ export default function Updates() {
                     }`}
                   >
                     {item.image_upload ? (
-                      <div className="flex aspect-[48/19] w-full items-center justify-center overflow-hidden bg-gray-950">
+                      <div className="flex aspect-[32/15] w-full items-center justify-center overflow-hidden bg-gray-950">
                         <img src={item.image_upload} alt={item.title} className="h-full w-full object-contain" />
                       </div>
                     ) : null}
@@ -643,6 +644,7 @@ export default function Updates() {
                       {events.map(event => {
                         const eventDate = parseDateAsLocal(event.event_date);
                         const isCompleted = event.is_completed || false;
+                        const eventTimeLabel = formatTimeRange(event.event_time, event.end_time);
                         return (
                         <li key={event.id} className={`bg-white p-4 rounded-lg shadow-sm flex items-start gap-4 transition-all duration-300 ${
                           isCompleted
@@ -668,6 +670,12 @@ export default function Updates() {
                                 <p className="font-semibold text-gray-900 mb-1">
                                   {event.title}
                                 </p>
+                                {eventTimeLabel && (
+                                  <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-amber-700">
+                                    <Clock className="h-4 w-4" />
+                                    {eventTimeLabel}
+                                  </p>
+                                )}
                                 {event.description && <p className="text-sm text-gray-600">{event.description}</p>}
                               </div>
                               {isCompleted ? (
@@ -719,7 +727,7 @@ export default function Updates() {
                   >
                     <div className="flex flex-col gap-5">
                       {item.image_upload && (
-                        <div className="flex aspect-[48/19] w-full items-center justify-center overflow-hidden rounded-lg bg-gray-950">
+                        <div className="flex aspect-[32/15] w-full items-center justify-center overflow-hidden rounded-lg bg-gray-950">
                           <img src={item.image_upload} alt={item.title} className="h-full w-full object-contain" />
                         </div>
                       )}
