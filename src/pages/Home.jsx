@@ -888,8 +888,8 @@ export default function Home() {
         aria-label="Loading homepage"
       >
         <div className="relative flex w-full max-w-sm flex-col items-center px-6 text-center">
-          <div className="absolute h-56 w-56 rounded-full bg-amber-300/20 blur-3xl"></div>
-          <HeritageSealLoader showText />
+          <div className="absolute h-44 w-44 rounded-full bg-amber-300/18 blur-3xl"></div>
+          <HeritageSealLoader size="medium" showText />
         </div>
       </div>
 
@@ -991,7 +991,7 @@ export default function Home() {
 
 
       {/* Scripture Divider with Rotating Verses */}
-      <section className="relative py-4 overflow-hidden">
+      <section className="relative overflow-hidden py-2 md:py-4">
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -1013,46 +1013,46 @@ export default function Home() {
 
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10 fade-in-section">
           {/* Open Bible Icon */}
-          <div className="mb-2 flex justify-center">
+          <div className="mb-1 flex justify-center md:mb-2">
             <div className="relative">
-              <BookOpen className="w-20 h-20 text-amber-300 bible-pages" />
+              <BookOpen className="h-12 w-12 text-amber-300 bible-pages md:h-20 md:w-20" />
               <div className="absolute inset-0 bg-amber-300/20 rounded-full blur-xl"></div>
             </div>
           </div>
 
           {/* Rotating Scripture Verse */}
-          <div className="flex flex-col items-center justify-center gap-2">
-            <blockquote key={currentVerseIndex} className="text-2xl md:text-4xl font-serif text-white leading-relaxed italic verse-transition">
+          <div className="flex flex-col items-center justify-center gap-1 md:gap-2">
+            <blockquote key={currentVerseIndex} className="text-lg md:text-4xl font-serif text-white leading-snug md:leading-relaxed italic verse-transition">
               "{scriptureVerses[currentVerseIndex].text}"
               <div className="mt-0">
-              <span className="text-amber-300 text-xl font-semibold not-italic">— {scriptureVerses[currentVerseIndex].reference}</span>
+              <span className="text-base font-semibold text-amber-300 not-italic md:text-xl">— {scriptureVerses[currentVerseIndex].reference}</span>
             </div>
             </blockquote>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentVerseIndex((prev) => (prev - 1 + scriptureVerses.length) % scriptureVerses.length)}
-                className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                className="rounded-full bg-white/20 p-1.5 transition-colors hover:bg-white/30 md:p-2"
                 aria-label="Previous verse"
               >
-                <ChevronDown className="w-5 h-5 text-amber-300 rotate-90" />
+                <ChevronDown className="h-4 w-4 rotate-90 text-amber-300 md:h-5 md:w-5" />
               </button>
               <button
                 onClick={() => setVersesPaused(!versesPaused)}
-                className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                className="rounded-full bg-white/20 p-1.5 transition-colors hover:bg-white/30 md:p-2"
                 aria-label={versesPaused ? "Resume verses" : "Pause verses"}
               >
                 {versesPaused ? (
-                  <Play className="w-5 h-5 text-amber-300" />
+                  <Play className="h-4 w-4 text-amber-300 md:h-5 md:w-5" />
                 ) : (
-                  <Pause className="w-5 h-5 text-amber-300" />
+                  <Pause className="h-4 w-4 text-amber-300 md:h-5 md:w-5" />
                 )}
               </button>
               <button
                 onClick={() => setCurrentVerseIndex((prev) => (prev + 1) % scriptureVerses.length)}
-                className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                className="rounded-full bg-white/20 p-1.5 transition-colors hover:bg-white/30 md:p-2"
                 aria-label="Next verse"
               >
-                <ChevronDown className="w-5 h-5 text-amber-300 -rotate-90" />
+                <ChevronDown className="h-4 w-4 -rotate-90 text-amber-300 md:h-5 md:w-5" />
               </button>
             </div>
           </div>
@@ -1130,7 +1130,7 @@ export default function Home() {
           ) : isLive && liveSermon ? (
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl md:rounded-2xl lg:grid lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.55fr)]">
               <div className="relative bg-gray-950">
-                <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+                <div className="relative aspect-[16/10] w-full sm:aspect-video">
                   <iframe
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
                     src={`${liveSermonUrl}?autoplay=1`}
@@ -1142,39 +1142,39 @@ export default function Home() {
                   ></iframe>
                 </div>
               </div>
-              <div className="flex flex-col justify-center p-3 md:p-6 lg:p-10">
+              <div className="flex flex-col justify-center p-2.5 md:p-6 lg:p-10">
                 <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white md:mb-4 md:px-3 md:py-1.5 md:text-xs">
                   <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span>
                   Live Now
                 </div>
-                <h3 className="mb-2 text-xl font-bold leading-tight text-gray-950 md:mb-3 md:text-3xl">{liveSermon.title}</h3>
-                <div className="mb-3 grid gap-1.5 text-sm text-gray-700 sm:grid-cols-2 md:mb-4 md:gap-2">
+                <h3 className="mb-1.5 text-xl font-bold leading-tight text-gray-950 md:mb-3 md:text-3xl">{liveSermon.title}</h3>
+                <div className="mb-2 grid gap-1 text-sm text-gray-700 sm:grid-cols-2 md:mb-4 md:gap-2">
                   {liveSermon.speaker && (
-                    <div className="rounded-lg bg-gray-50 px-2.5 py-1 sm:col-span-2 md:px-3 md:py-1.5">
-                      <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                    <div className="rounded-md bg-gray-50 px-2 py-0.5 sm:col-span-2 md:rounded-lg md:px-3 md:py-1.5">
+                      <p className="flex min-w-0 items-center gap-1.5 text-xs text-gray-900 sm:block md:text-sm">
                         <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                           <UserRound className="h-4 w-4 text-amber-700" />
-                          Speaker
+                          Speaker:
                         </span>
                         <span className="min-w-0 overflow-x-auto whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{liveSermon.speaker}</span>
                       </p>
                     </div>
                   )}
-                  <div className="rounded-lg bg-gray-50 px-2.5 py-1 md:px-3 md:py-1.5">
-                    <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                  <div className="rounded-md bg-gray-50 px-2 py-0.5 md:rounded-lg md:px-3 md:py-1.5">
+                    <p className="flex min-w-0 items-center gap-1.5 text-xs text-gray-900 sm:block md:text-sm">
                       <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                         <Clock className="h-4 w-4 text-amber-700" />
-                        Date
+                        Date:
                       </span>
                       <span className="min-w-0 whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{format(parseISO(liveSermon.date), 'MMMM d, yyyy')}</span>
                     </p>
                   </div>
                   {liveSermon.scripture && (
-                    <div className="rounded-lg bg-gray-50 px-2.5 py-1 sm:col-span-2 md:px-3 md:py-1.5">
-                      <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                    <div className="rounded-md bg-gray-50 px-2 py-0.5 sm:col-span-2 md:rounded-lg md:px-3 md:py-1.5">
+                      <p className="flex min-w-0 items-center gap-1.5 text-xs text-gray-900 sm:block md:text-sm">
                         <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                           <BookOpen className="h-4 w-4 flex-shrink-0 text-amber-700" />
-                          Scripture(s)
+                          Scripture(s):
                         </span>
                         <span className="min-w-0 overflow-x-auto whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{liveSermon.scripture}</span>
                       </p>
@@ -1206,7 +1206,7 @@ export default function Home() {
           ) : latestSermon ? (
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl md:rounded-2xl lg:grid lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.55fr)]">
               <div className="relative bg-gray-950">
-                <div style={{ paddingTop: '56.25%', position: 'relative' }}>
+                <div className="relative aspect-[16/10] w-full sm:aspect-video">
                   {embedUrl ? (
                       <iframe 
                           src={embedUrl}
@@ -1246,39 +1246,41 @@ export default function Home() {
                   )}
                 </div>
               </div>
-              <div className="flex flex-col justify-center p-3 md:p-6 lg:p-10">
-                <div className="mb-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-800 md:mb-4 md:gap-2 md:px-3 md:py-1.5 md:text-xs">
-                  <Play className="h-3.5 w-3.5" />
-                  Featured Message
+              <div className="flex flex-col justify-center p-2.5 md:p-6 lg:p-10">
+                <div className="mb-1.5 flex flex-wrap items-center gap-2 md:mb-3 md:block">
+                  <div className="inline-flex w-fit shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 md:mb-4 md:gap-2 md:px-3 md:py-1.5 md:text-xs">
+                    <Play className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    Featured Message
+                  </div>
+                  <h3 className="min-w-0 flex-1 break-words text-lg font-bold leading-tight text-gray-950 md:mb-3 md:text-3xl lg:text-4xl">{latestSermon.title}</h3>
                 </div>
-                <h3 className="mb-2 break-words text-xl font-bold leading-tight text-gray-950 md:mb-3 md:text-3xl lg:text-4xl">{latestSermon.title}</h3>
-                <div className="mb-3 grid gap-1.5 text-sm text-gray-700 sm:grid-cols-2 md:mb-4 md:gap-2">
+                <div className="mb-2 grid gap-1 text-sm text-gray-700 sm:grid-cols-2 md:mb-4 md:gap-2">
                     {latestSermon.speaker && (
-                      <div className="rounded-lg bg-gray-50 px-2.5 py-1 sm:col-span-2 md:px-3 md:py-1.5">
-                        <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                      <div className="rounded-md bg-gray-50 px-2 py-0.5 sm:col-span-2 md:rounded-lg md:px-3 md:py-1.5">
+                        <p className="flex min-w-0 items-center gap-1.5 text-xs text-gray-900 sm:block md:text-sm">
                           <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                             <UserRound className="h-4 w-4 text-amber-700" />
-                            Speaker
+                            Speaker:
                           </span>
                           <span className="min-w-0 overflow-x-auto whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{latestSermon.speaker}</span>
                         </p>
                       </div>
                     )}
-                    <div className="rounded-lg bg-gray-50 px-2.5 py-1 md:px-3 md:py-1.5">
-                      <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                    <div className="rounded-md bg-gray-50 px-2 py-0.5 md:rounded-lg md:px-3 md:py-1.5">
+                      <p className="flex min-w-0 items-center gap-1.5 text-xs text-gray-900 sm:block md:text-sm">
                         <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                           <Clock className="h-4 w-4 text-amber-700" />
-                          Date
+                          Date:
                         </span>
                         <span className="min-w-0 whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{format(parseISO(latestSermon.date), 'MMMM d, yyyy')}</span>
                       </p>
                     </div>
                     {latestSermon.scripture && (
-                      <div className="rounded-lg bg-gray-50 px-2.5 py-1 sm:col-span-2 md:px-3 md:py-1.5">
-                        <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                      <div className="rounded-md bg-gray-50 px-2 py-0.5 sm:col-span-2 md:rounded-lg md:px-3 md:py-1.5">
+                        <p className="flex min-w-0 items-center gap-1.5 text-xs text-gray-900 sm:block md:text-sm">
                           <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                             <BookOpen className="h-4 w-4 flex-shrink-0 text-amber-700" />
-                            Scripture(s)
+                            Scripture(s):
                           </span>
                           <span className="min-w-0 overflow-x-auto whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{latestSermon.scripture}</span>
                         </p>

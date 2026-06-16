@@ -38,8 +38,8 @@ const AuthenticatedApp = () => {
           aria-label="Loading homepage"
         >
           <div className="relative flex w-full max-w-sm flex-col items-center px-6 text-center">
-            <div className="absolute h-56 w-56 rounded-full bg-amber-300/20 blur-3xl"></div>
-            <HeritageSealLoader showText />
+            <div className="absolute h-44 w-44 rounded-full bg-amber-300/18 blur-3xl"></div>
+            <HeritageSealLoader size="medium" showText />
           </div>
         </div>
       );

@@ -4,10 +4,13 @@ export default function HeritageSealLoader({
   className = "",
 }) {
   const isSmall = size === "small";
-  const wrapperSize = isSmall ? "h-20 w-20" : "h-36 w-36";
-  const glowSize = isSmall ? "h-20 w-20" : "h-32 w-32";
-  const iconSize = isSmall ? "h-12 w-12" : "h-24 w-24";
-  const textTop = isSmall ? "" : "mt-7";
+  const isMedium = size === "medium";
+  const wrapperSize = isSmall ? "h-20 w-20" : isMedium ? "h-28 w-28" : "h-36 w-36";
+  const glowSize = isSmall ? "h-20 w-20" : isMedium ? "h-28 w-28" : "h-32 w-32";
+  const iconSize = isSmall ? "h-12 w-12" : isMedium ? "h-20 w-20" : "h-24 w-24";
+  const textTop = isSmall ? "" : isMedium ? "mt-5" : "mt-7";
+  const headingSize = isMedium ? "text-xl" : "text-2xl";
+  const welcomeSize = isMedium ? "mt-2 text-sm" : "mt-3 text-base";
   const lineDrawClass = isSmall ? "" : "animate-[heritageLoaderLineDraw_2.4s_ease-in-out_infinite]";
 
   return (
@@ -70,8 +73,8 @@ export default function HeritageSealLoader({
 
       {showText && (
         <div className={textTop}>
-          <h1 className="text-2xl font-bold leading-tight text-[#3f2a1f]">Goodwill Presbyterian Church, USA</h1>
-          <p className="mt-3 text-base font-semibold text-amber-800">Welcome.</p>
+          <h1 className={`${headingSize} font-bold leading-tight text-[#3f2a1f]`}>Goodwill Presbyterian Church, USA</h1>
+          <p className={`${welcomeSize} font-semibold text-amber-800`}>Welcome.</p>
         </div>
       )}
     </div>
