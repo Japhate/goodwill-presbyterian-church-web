@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ExternalLink, Video, Clock, Navigation } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, ExternalLink, Video, Clock, Navigation } from "lucide-react";
 import { localApi } from "@/api/localApiClient";
 import { format } from "date-fns";
 import { DEFAULT_HOMEPAGE_BANNER_MESSAGES, LIVE_BIBLE_STUDY_BANNER_MESSAGE } from "@/lib/homepageBanners";
@@ -11,8 +11,8 @@ const FALLBACK_SLIDES = [
   {
     image_url: "/images/hero/goodwill-presbyterian-church-hero.png",
     alt_text: "Welcome to Goodwill Presbyterian Church",
-    link_url: "",
-    link_label: "",
+    link_url: "/About",
+    link_label: "Learn More",
   },
   {
     image_url: "/images/hero/zoom-meeting-hero.png",
@@ -143,6 +143,16 @@ const BIBLE_STUDY_END_HOUR = 19;   // 7:00 PM
 const BIBLE_STUDY_END_MIN = 0;
 const SHOW_HERO_EXTERNAL_ACTION_BUTTON = false;
 const SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY = false;
+const PERMANENT_WELCOME_HERO_ID = "hero-1";
+const PERMANENT_WELCOME_HERO_IMAGE = "/images/hero/goodwill-presbyterian-church-hero.png";
+const ABOUT_PAGE_URL = "/About";
+
+function isPermanentWelcomeHeroSlide(slide) {
+  if (!slide) return false;
+
+  return slide.id === PERMANENT_WELCOME_HERO_ID
+    || slide.image_url === PERMANENT_WELCOME_HERO_IMAGE;
+}
 
 function isZoomBibleStudySlide(slide) {
   if (!slide) return false;
@@ -371,13 +381,20 @@ export default function HeroSlideshow() {
     : null;
   const currentImageUrl = currentSlide?.image_url;
   const nextImageUrl = nextSlide?.image_url;
-  const relatedAnnouncementUrl = currentSlide?.announcement_id
+  const isPermanentWelcomeHero = isPermanentWelcomeHeroSlide(currentSlide);
+  const welcomeHeroUrl = isPermanentWelcomeHero ? ABOUT_PAGE_URL : "";
+  const relatedAnnouncementUrl = !isPermanentWelcomeHero && currentSlide?.announcement_id
     ? `/Updates#announcement-${currentSlide.announcement_id}`
     : "";
-  const externalSlideUrl = currentSlide?.link_url || (isZoomBibleStudySlide(currentSlide) ? BIBLE_STUDY_ZOOM : "");
+  const explicitSlideUrl = currentSlide?.link_url || "";
+  const isExplicitExternalUrl = /^https?:\/\//i.test(explicitSlideUrl);
+  const internalSlideUrl = !welcomeHeroUrl && explicitSlideUrl.startsWith("/") ? explicitSlideUrl : "";
+  const externalSlideUrl = isExplicitExternalUrl
+    ? explicitSlideUrl
+    : isZoomBibleStudySlide(currentSlide) ? BIBLE_STUDY_ZOOM : "";
   const showExternalSlideButton = SHOW_HERO_EXTERNAL_ACTION_BUTTON && Boolean(externalSlideUrl);
-  const primarySlideUrl = relatedAnnouncementUrl || externalSlideUrl;
-  const primarySlideIsExternal = Boolean(primarySlideUrl && !relatedAnnouncementUrl && externalSlideUrl);
+  const primarySlideUrl = welcomeHeroUrl || relatedAnnouncementUrl || internalSlideUrl || externalSlideUrl;
+  const primarySlideIsExternal = Boolean(primarySlideUrl && primarySlideUrl === externalSlideUrl && isExplicitExternalUrl);
 
   useEffect(() => {
     setCurrent(0);
@@ -504,7 +521,7 @@ export default function HeroSlideshow() {
                 loading="eager"
               />
               {/* Link overlay buttons */}
-              {(relatedAnnouncementUrl || showExternalSlideButton) && (
+              {(welcomeHeroUrl || relatedAnnouncementUrl || showExternalSlideButton) && (
                 <div
                   className={
                     currentSlide.is_priority_announcement
@@ -524,6 +541,16 @@ export default function HeroSlideshow() {
                     >
                       <ExternalLink className="w-4 h-4" />
                       {currentSlide.details_button_label || currentSlide.link_label || "More"}
+                    </a>
+                  )}
+                  {welcomeHeroUrl && (
+                    <a
+                      href={welcomeHeroUrl}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-white/10 px-3.5 py-1.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-white hover:shadow-xl sm:px-4 sm:py-2 md:px-5 md:py-2.5 md:text-base"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                      {currentSlide.link_label || "Learn More"}
                     </a>
                   )}
                   {showExternalSlideButton && (
