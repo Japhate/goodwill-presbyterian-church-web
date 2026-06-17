@@ -609,16 +609,16 @@ export default function Updates() {
                   <div
                     id={`announcement-${item.id}`}
                     key={item.id}
-                    className={`flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-xl scroll-mt-[160px] md:flex-row md:scroll-mt-[140px] ${item.image_upload ? "md:h-[clamp(260px,16vw,320px)]" : ""} ${
+                    className={`flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-xl scroll-mt-[160px] md:flex-row md:scroll-mt-[140px] ${
                       selectedAnnouncementId === String(item.id) ? "ring-4 ring-amber-400 ring-offset-4" : ""
                     }`}
                   >
                     {item.image_upload ? (
-                      <div className="flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden bg-white p-2 md:h-full md:w-[32%] xl:w-[30%]">
+                      <div className="flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden bg-white p-2 md:w-[32%] md:self-start xl:w-[30%]">
                         <img src={item.image_upload} alt={item.title} className="h-full w-full object-contain object-left" />
                       </div>
                     ) : null}
-                    <div className="flex min-h-0 flex-grow flex-col p-4 md:h-full md:overflow-hidden md:py-2 md:pl-2 md:pr-4 xl:py-2 xl:pl-2 xl:pr-5">
+                    <div className="flex min-h-0 flex-grow flex-col p-4 md:max-h-[calc((100vw-1.5rem)*0.32*9/16)] md:overflow-hidden md:py-2 md:pl-2 md:pr-4 lg:max-h-[calc((100vw-2rem)*0.32*9/16)] xl:max-h-[calc((100vw-2rem)*0.30*9/16)] xl:py-2 xl:pl-2 xl:pr-5">
                       <div className="min-h-0 md:h-full md:overflow-y-auto md:pr-2">
                       <div className="mb-2 flex items-start justify-between gap-2">
                           <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
