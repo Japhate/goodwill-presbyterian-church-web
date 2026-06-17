@@ -900,14 +900,14 @@ export default function HeroSlideshow({ onReady }) {
         <>
           <button
             onClick={handleBack}
-            className="absolute bottom-3 left-3 z-30 rounded-full bg-black/40 p-2 text-white transition-all hover:bg-black/70 md:bottom-auto md:top-1/2 md:-translate-y-1/2"
+            className="absolute left-3 top-1/2 z-30 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white transition-all hover:bg-black/70"
             aria-label="Previous slide"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
           <button
             onClick={handleNext}
-            className="absolute bottom-3 right-3 z-30 rounded-full bg-black/40 p-2 text-white transition-all hover:bg-black/70 md:bottom-auto md:top-1/2 md:-translate-y-1/2"
+            className="absolute right-3 top-1/2 z-30 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white transition-all hover:bg-black/70"
             aria-label="Next slide"
           >
             <ChevronRight className="w-6 h-6" />
