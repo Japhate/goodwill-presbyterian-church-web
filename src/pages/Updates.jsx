@@ -299,12 +299,10 @@ export default function Updates() {
       const aHasDate = !!aDate;
       const bHasDate = !!bDate;
 
-      if (aHasDate && !bHasDate) return -1;
-      if (!aHasDate && bHasDate) return 1;
-      if (!aHasDate && !bHasDate) {
-        return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
-      }
-      return aDate.getTime() - bDate.getTime();
+      if (!aHasDate && bHasDate) return -1;
+      if (aHasDate && !bHasDate) return 1;
+      if (!aHasDate && !bHasDate) return 0;
+      return bDate.getTime() - aDate.getTime();
     });
   }, [feedItems, today]);
 

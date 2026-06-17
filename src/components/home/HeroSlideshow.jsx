@@ -305,6 +305,7 @@ export default function HeroSlideshow({ onReady }) {
   const [landingImage, setLandingImage] = useState(DEFAULT_LANDING_IMAGE);
   const [announcements, setAnnouncements] = useState([]);
   const [failedAnnouncementImageIds, setFailedAnnouncementImageIds] = useState(() => new Set());
+  const [imageAspectRatios, setImageAspectRatios] = useState({});
   const [managedBanners, setManagedBanners] = useState(null);
   const [current, setCurrent] = useState(0);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
@@ -461,6 +462,7 @@ export default function HeroSlideshow({ onReady }) {
   const getSlideImageUrl = (slide) => getLinkedAnnouncementImage(slide) || slide?.image_url || "";
   const currentImageUrl = getSlideImageUrl(currentSlide);
   const nextImageUrl = getSlideImageUrl(nextSlide);
+  const currentImageAspectRatio = imageAspectRatios[currentImageUrl] || "1920 / 900";
   const linkedAnnouncement = getAnnouncementForSlide(currentSlide);
   const isPermanentWelcomeHero = isPermanentWelcomeHeroSlide(currentSlide);
   const isFirstLandingSlide = current === 0 && !currentSlide?.is_priority_announcement && !isZoomBibleStudySlide(currentSlide);
@@ -585,7 +587,17 @@ export default function HeroSlideshow({ onReady }) {
     }
   };
 
-  const handleCurrentImageReady = () => {
+  const handleCurrentImageReady = (event) => {
+    const image = event?.currentTarget;
+    if (image?.naturalWidth && image?.naturalHeight && currentImageUrl) {
+      const nextAspectRatio = `${image.naturalWidth} / ${image.naturalHeight}`;
+      setImageAspectRatios((currentRatios) => (
+        currentRatios[currentImageUrl] === nextAspectRatio
+          ? currentRatios
+          : { ...currentRatios, [currentImageUrl]: nextAspectRatio }
+      ));
+    }
+
     if (hasReportedReadyRef.current) return;
     hasReportedReadyRef.current = true;
     onReady?.();
@@ -726,7 +738,8 @@ export default function HeroSlideshow({ onReady }) {
       {/* Slides */}
       {currentSlide && (
         <div
-          className={`relative aspect-video w-full overflow-hidden bg-white ${primarySlideUrl ? "cursor-pointer" : ""}`}
+          className={`relative w-full overflow-hidden bg-[#f7edcf] ${primarySlideUrl ? "cursor-pointer" : ""}`}
+          style={{ aspectRatio: showWelcomeHeroIntro ? "16 / 9" : currentImageAspectRatio }}
           onClick={handleSlideClick}
           onKeyDown={handleSlideKeyDown}
           role={primarySlideUrl ? "link" : undefined}
