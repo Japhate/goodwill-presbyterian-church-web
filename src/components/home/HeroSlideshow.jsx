@@ -726,7 +726,7 @@ export default function HeroSlideshow({ onReady }) {
       {/* Slides */}
       {currentSlide && (
         <div
-          className={`relative h-[68vw] min-h-[260px] max-h-[420px] w-full overflow-hidden bg-white sm:h-[60vw] md:aspect-video md:h-auto md:min-h-0 md:max-h-none ${primarySlideUrl ? "cursor-pointer" : ""}`}
+          className={`relative aspect-video w-full overflow-hidden bg-white ${primarySlideUrl ? "cursor-pointer" : ""}`}
           onClick={handleSlideClick}
           onKeyDown={handleSlideKeyDown}
           role={primarySlideUrl ? "link" : undefined}
