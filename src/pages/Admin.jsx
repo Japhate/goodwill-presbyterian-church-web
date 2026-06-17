@@ -1324,11 +1324,16 @@ export default function AdminPage() {
     }
 
     const slidesById = new Map(heroSlides.map((slide) => [String(slide.id), slide]));
+    const lastActiveHeroSlideOrder = heroSlides
+      .filter((slide) => slide.is_active !== false)
+      .reduce((maxOrder, slide) => Math.max(maxOrder, Number(slide.order) || 0), 0);
     const results = await Promise.allSettled(ids.map((id) => {
       const slide = slidesById.get(String(id));
       if (!slide) throw new Error(`Hero slide ${id} was not found.`);
       const { id: _id, ...slideData } = slide;
-      return HeroSlide.update(id, { ...slideData, is_active: isActive });
+      const restoredIndex = ids.findIndex((selectedId) => String(selectedId) === String(id));
+      const restoredOrder = isActive ? lastActiveHeroSlideOrder + restoredIndex + 1 : slideData.order;
+      return HeroSlide.update(id, { ...slideData, is_active: isActive, order: restoredOrder });
     }));
     const selectedSlides = ids.map((id) => slidesById.get(String(id))).filter(Boolean);
     const announcementIdsToHide = !isActive
