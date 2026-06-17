@@ -8,9 +8,9 @@ export default function HeritageSealLoader({
   const wrapperSize = isSmall ? "h-20 w-20" : isMedium ? "h-28 w-28" : "h-36 w-36";
   const glowSize = isSmall ? "h-20 w-20" : isMedium ? "h-28 w-28" : "h-32 w-32";
   const iconSize = isSmall ? "h-12 w-12" : isMedium ? "h-20 w-20" : "h-24 w-24";
-  const textTop = isSmall ? "" : isMedium ? "mt-5" : "mt-7";
-  const headingSize = isMedium ? "text-xl" : "text-2xl";
-  const welcomeSize = isMedium ? "mt-2 text-sm" : "mt-3 text-base";
+  const textTop = isSmall ? "mt-3" : isMedium ? "mt-5" : "mt-7";
+  const headingSize = isSmall ? "text-base" : isMedium ? "text-xl" : "text-2xl";
+  const welcomeSize = isSmall ? "mt-1 text-xs" : isMedium ? "mt-2 text-sm" : "mt-3 text-base";
   const lineDrawClass = isSmall ? "" : "animate-[heritageLoaderLineDraw_2.4s_ease-in-out_infinite]";
 
   return (

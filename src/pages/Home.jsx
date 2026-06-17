@@ -217,6 +217,13 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isHomepageReady) return;
+    document.querySelectorAll('.fade-in-section').forEach((element) => {
+      element.classList.add('animate-in');
+    });
+  }, [isHomepageReady]);
+
   // Check for scheduled announcement events that are live right now.
   useEffect(() => {
     const checkLiveEvents = () => {
@@ -887,11 +894,16 @@ export default function Home() {
         aria-live="polite"
         aria-label="Loading homepage"
       >
-        <div className="relative flex w-full max-w-sm flex-col items-center px-6 text-center">
-          <div className="absolute h-44 w-44 rounded-full bg-amber-300/18 blur-3xl"></div>
-          <HeritageSealLoader size="medium" showText />
+        <div className="relative flex w-full max-w-xs flex-col items-center px-6 text-center">
+          <div className="absolute h-32 w-32 rounded-full bg-amber-300/18 blur-3xl"></div>
+          <HeritageSealLoader size="small" showText />
         </div>
       </div>
+
+      <div
+        className={`transition-opacity duration-700 ease-out ${isHomepageReady ? "opacity-100" : "opacity-0"}`}
+        aria-hidden={!isHomepageReady}
+      >
 
       {/* Floating Background Elements Throughout Page */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
@@ -1425,6 +1437,7 @@ export default function Home() {
             </div>
         </div>
       </section>
+      </div>
     </div>
   );
 }
