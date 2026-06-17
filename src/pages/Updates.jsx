@@ -590,7 +590,8 @@ export default function Updates() {
                         <img src={item.image_upload} alt={item.title} className="h-full w-full object-contain object-left" />
                       </div>
                     ) : null}
-                    <div className="flex min-h-0 flex-grow flex-col p-4 md:h-full md:justify-center md:overflow-y-auto md:p-4 xl:px-5 xl:py-4">
+                    <div className="flex min-h-0 flex-grow flex-col p-4 md:h-full md:overflow-hidden md:p-4 xl:px-5 xl:py-4">
+                      <div className="min-h-0 md:h-full md:overflow-y-auto md:pr-2">
                       <div className="mb-2 flex items-start justify-between gap-2">
                           <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
                           <Badge variant="outline" className="shrink-0 border-amber-500 px-2 py-0.5 text-[10px] font-semibold leading-tight text-amber-600">
@@ -665,6 +666,7 @@ export default function Updates() {
                             )}
                           </div>
                         )}
+                      </div>
                       </div>
                     </div>
                   </div>

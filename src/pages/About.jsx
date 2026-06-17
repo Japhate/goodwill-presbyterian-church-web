@@ -245,7 +245,7 @@ export default function About() {
       </div>
 
       {/* Content with padding to account for fixed sub-nav - reduced spacing */}
-      <div className="pt-24 md:pt-20">
+      <div className="pt-1 md:pt-1">
         {/* Our Story */}
         <section id="story" className="py-4 bg-white scroll-mt-[210px]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
