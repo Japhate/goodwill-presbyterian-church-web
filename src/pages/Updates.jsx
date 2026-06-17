@@ -63,6 +63,22 @@ const getLocationType = (item) => {
 const hasPhysicalLocation = (item) => ["physical", "both"].includes(getLocationType(item));
 const hasVirtualLocation = (item) => ["virtual", "both"].includes(getLocationType(item));
 
+const getVirtualActionLabel = (platform, url = "") => {
+  const cleanPlatform = String(platform || "").trim();
+  const platformSource = cleanPlatform || String(url || "");
+  if (!platformSource) return "Join Online";
+
+  const normalizedPlatform = platformSource.toLowerCase();
+  if (normalizedPlatform.includes("zoom")) return "Join Zoom";
+  if (normalizedPlatform.includes("google") || normalizedPlatform.includes("meet")) return "Join Google Meet";
+  if (normalizedPlatform.includes("teams")) return "Join Microsoft Teams";
+  if (normalizedPlatform.includes("youtube")) return "Watch on YouTube";
+  if (normalizedPlatform.includes("facebook")) return "Watch on Facebook";
+
+  if (!cleanPlatform) return "Join Online";
+  return `Join ${cleanPlatform}`;
+};
+
 const addDays = (date, days) => {
   const nextDate = new Date(date);
   nextDate.setDate(nextDate.getDate() + days);
@@ -422,7 +438,7 @@ export default function Updates() {
         </div>
       </section>
       <div className="fixed top-20 left-0 right-0 z-30 shadow-md" style={{ background: 'var(--header-bg)' }}>
-        <div className="mx-auto max-w-[1500px] px-3 sm:px-5 lg:px-6">
+        <div className="mx-auto max-w-[1800px] px-2 sm:px-4 lg:px-5 2xl:px-6">
             <div className="flex flex-wrap items-end justify-center gap-2 sm:gap-4 pt-3 pb-0">
                 {subNavLinks.map(link => (
                     <Button
@@ -508,7 +524,7 @@ export default function Updates() {
             </div>
 
 
-            <div className="grid grid-cols-1 gap-6">
+            <div className="relative left-1/2 grid w-screen -translate-x-1/2 grid-cols-1 gap-6">
               {filteredFeed.length > 0 ? (
                 filteredFeed.map((item) => {
                   const itemDate = parseDateAsLocal(item.date);
@@ -522,34 +538,32 @@ export default function Updates() {
                   <div
                     id={`announcement-${item.id}`}
                     key={item.id}
-                    className={`flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-xl scroll-mt-[160px] md:flex-row md:scroll-mt-[140px] ${
+                    className={`flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-xl scroll-mt-[160px] md:flex-row md:scroll-mt-[140px] ${item.image_upload ? "md:h-[clamp(380px,24vw,460px)]" : ""} ${
                       selectedAnnouncementId === String(item.id) ? "ring-4 ring-amber-400 ring-offset-4" : ""
                     }`}
                   >
                     {item.image_upload ? (
-                      <div className="flex aspect-[16/10] w-full shrink-0 items-center justify-center overflow-hidden bg-white md:aspect-auto md:min-h-[320px] md:w-[42%] lg:w-[38%]">
+                      <div className="flex aspect-[16/10] w-full shrink-0 items-center justify-center overflow-hidden bg-white md:h-full md:w-[35%] xl:w-[32%]">
                         <img src={item.image_upload} alt={item.title} className="h-full w-full object-contain" />
                       </div>
                     ) : null}
-                    <div className="flex flex-grow flex-col p-5 md:p-6">
-                      <div className="flex-grow">
-                        <div className="mb-2 flex items-start justify-between gap-2">
+                    <div className="flex min-h-0 flex-grow flex-col p-5 md:h-full md:overflow-y-auto md:p-5 xl:p-6">
+                      <div className="mb-3 flex items-start justify-between gap-2">
                           <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
                           <Badge variant="outline" className="shrink-0 border-amber-500 px-2 py-0.5 text-[10px] font-semibold leading-tight text-amber-600">
                             {categories[item.category] || 'Church-Wide'}
                           </Badge>
-                        </div>
-                        <div className="text-gray-600 prose prose-sm max-w-none">
-                          <ReactMarkdown
-                            components={{
-                                a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:underline"/>
-                            }}
-                          >
-                              {item.content}
-                          </ReactMarkdown>
-                        </div>
                       </div>
-                      <div className="mt-4 space-y-2 border-t pt-4 text-sm text-gray-500">
+                      <div className="prose prose-sm max-w-none text-gray-600 lg:prose-p:my-1.5 lg:text-[13px] lg:leading-relaxed xl:text-sm">
+                        <ReactMarkdown
+                          components={{
+                              a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:underline"/>
+                          }}
+                        >
+                            {item.content}
+                        </ReactMarkdown>
+                      </div>
+                      <div className="mt-3 grid content-start gap-x-5 gap-y-2 border-t pt-3 text-sm text-gray-500 sm:grid-cols-2 xl:gap-x-7">
                         {dateLabel && (
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <Calendar className="h-4 w-4 flex-shrink-0" />
@@ -587,11 +601,11 @@ export default function Updates() {
                           </div>
                         )}
                         {(item.zoom_link || item.directions_url || item.file_upload) && (
-                          <div className="flex flex-wrap gap-2 pt-2">
+                          <div className="flex flex-wrap gap-2 pt-2 sm:col-span-2">
                             {hasVirtualLocation(item) && item.zoom_link && (
-                              <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+                              <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
-                                Open Link
+                                {getVirtualActionLabel(item.virtual_platform, item.zoom_link)}
                               </a>
                             )}
                             {hasPhysicalLocation(item) && item.directions_url && (
