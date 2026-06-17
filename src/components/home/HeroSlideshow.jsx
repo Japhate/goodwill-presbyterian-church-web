@@ -229,14 +229,15 @@ function getCountdownLabel(targetDate, now) {
   const diffMs = targetDate.getTime() - now.getTime();
   if (diffMs <= 0) return "Live now";
 
-  const totalMinutes = Math.ceil(diffMs / 60000);
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const minutes = totalMinutes % 60;
+  const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
 
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+  if (days > 0) return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  return `${minutes}m ${seconds}s`;
 }
 
 function warmHeroImage(url) {
@@ -438,7 +439,7 @@ export default function HeroSlideshow({ onReady }) {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 30000);
+    const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -899,32 +900,47 @@ export default function HeroSlideshow({ onReady }) {
                     </a>
                   )}
                   {externalActionButtons.map((button) => (
-                    <a
-                      key={`${button.type}-${button.url}`}
-                      href={button.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={
-                        button.type === "directions"
-                          ? "inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-100/80 bg-gradient-to-r from-[#b87918] via-[#f3c45b] to-[#c58a1f] px-2 py-1 text-[11px] font-bold text-[#2d1c12] shadow-[0_10px_26px_rgba(0,0,0,0.26),0_0_18px_rgba(243,196,91,0.22)] ring-1 ring-white/25 transition-all hover:-translate-y-0.5 hover:rounded-xl hover:from-[#f4cc69] hover:via-[#fff0a8] hover:to-[#c58a1f] hover:shadow-[0_14px_32px_rgba(0,0,0,0.34),0_0_26px_rgba(243,196,91,0.36)] sm:px-3 sm:py-1.5 sm:text-sm md:rounded-xl md:px-4 md:py-2 md:text-base"
-                          : "inline-flex shrink-0 items-center gap-1 rounded-lg border border-blue-200/50 bg-blue-600/95 px-2 py-1 text-[11px] font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:rounded-xl hover:bg-blue-700 hover:shadow-xl sm:px-3 sm:py-1.5 sm:text-sm md:rounded-xl md:px-4 md:py-2 md:text-base"
-                      }
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {button.type === "directions" ? (
-                        <Navigation className="w-4 h-4" />
-                      ) : button.type === "virtual" ? (
-                        <Video className="w-4 h-4" />
-                      ) : (
-                        <ExternalLink className="w-4 h-4" />
-                      )}
-                      <span>{button.label}</span>
-                      {button.type === "virtual" && button.countdown && (
-                        <span className="rounded-full border border-white/30 bg-white/18 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-inner md:px-2 md:text-xs">
-                          {button.countdown}
-                        </span>
-                      )}
-                    </a>
+                    button.type === "virtual" && button.countdown ? (
+                      <div key={`${button.type}-${button.url}`} className="flex shrink-0 flex-col items-center gap-1">
+                        <div className="inline-flex items-center gap-1 rounded-full border border-blue-100/60 bg-white/92 px-2 py-0.5 text-[10px] font-bold leading-none text-blue-900 shadow-[0_8px_22px_rgba(0,0,0,0.22)] ring-1 ring-blue-200/40 backdrop-blur-sm md:px-2.5 md:py-1 md:text-xs">
+                          <Clock className="h-3 w-3 text-blue-600" />
+                          <span className="text-blue-700">Starts in</span>
+                          <span className="tabular-nums text-blue-950">{button.countdown}</span>
+                        </div>
+                        <a
+                          href={button.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-blue-200/50 bg-blue-600/95 px-2 py-1 text-[11px] font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:rounded-xl hover:bg-blue-700 hover:shadow-xl sm:px-3 sm:py-1.5 sm:text-sm md:rounded-xl md:px-4 md:py-2 md:text-base"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Video className="w-4 h-4" />
+                          <span>{button.label}</span>
+                        </a>
+                      </div>
+                    ) : (
+                      <a
+                        key={`${button.type}-${button.url}`}
+                        href={button.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={
+                          button.type === "directions"
+                            ? "inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-100/80 bg-gradient-to-r from-[#b87918] via-[#f3c45b] to-[#c58a1f] px-2 py-1 text-[11px] font-bold text-[#2d1c12] shadow-[0_10px_26px_rgba(0,0,0,0.26),0_0_18px_rgba(243,196,91,0.22)] ring-1 ring-white/25 transition-all hover:-translate-y-0.5 hover:rounded-xl hover:from-[#f4cc69] hover:via-[#fff0a8] hover:to-[#c58a1f] hover:shadow-[0_14px_32px_rgba(0,0,0,0.34),0_0_26px_rgba(243,196,91,0.36)] sm:px-3 sm:py-1.5 sm:text-sm md:rounded-xl md:px-4 md:py-2 md:text-base"
+                            : "inline-flex shrink-0 items-center gap-1 rounded-lg border border-blue-200/50 bg-blue-600/95 px-2 py-1 text-[11px] font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:rounded-xl hover:bg-blue-700 hover:shadow-xl sm:px-3 sm:py-1.5 sm:text-sm md:rounded-xl md:px-4 md:py-2 md:text-base"
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {button.type === "directions" ? (
+                          <Navigation className="w-4 h-4" />
+                        ) : button.type === "virtual" ? (
+                          <Video className="w-4 h-4" />
+                        ) : (
+                          <ExternalLink className="w-4 h-4" />
+                        )}
+                        <span>{button.label}</span>
+                      </a>
+                    )
                   ))}
                 </div>
               )}
@@ -958,29 +974,43 @@ export default function HeroSlideshow({ onReady }) {
             </a>
           )}
           {externalActionButtons.map((button) => (
-            <a
-              key={`${button.type}-${button.url}-mobile`}
-              href={button.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={
-                button.type === "directions"
-                  ? "inline-flex items-center justify-center gap-1 rounded-xl border border-amber-100/80 bg-gradient-to-r from-[#b87918] via-[#f3c45b] to-[#c58a1f] px-3 py-1.5 text-xs font-bold text-[#2d1c12] shadow-lg ring-1 ring-white/25 transition-all hover:bg-amber-400"
-                  : "inline-flex items-center justify-center gap-1 rounded-xl border border-blue-200/70 bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg transition-all hover:bg-blue-700"
-              }
-            >
-              {button.type === "directions" ? (
-                <Navigation className="h-4 w-4" />
-              ) : (
-                <Video className="h-4 w-4" />
-              )}
-              <span>{button.label}</span>
-              {button.type === "virtual" && button.countdown && (
-                <span className="rounded-full border border-white/30 bg-white/18 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-inner">
-                  {button.countdown}
-                </span>
-              )}
-            </a>
+            button.type === "virtual" && button.countdown ? (
+              <div key={`${button.type}-${button.url}-mobile`} className="flex flex-col items-center gap-1">
+                <div className="inline-flex items-center gap-1 rounded-full border border-blue-100/70 bg-white px-2 py-0.5 text-[10px] font-bold leading-none text-blue-900 shadow-sm">
+                  <Clock className="h-3 w-3 text-blue-600" />
+                  <span>Starts in</span>
+                  <span className="tabular-nums">{button.countdown}</span>
+                </div>
+                <a
+                  href={button.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1 rounded-xl border border-blue-200/70 bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg transition-all hover:bg-blue-700"
+                >
+                  <Video className="h-4 w-4" />
+                  <span>{button.label}</span>
+                </a>
+              </div>
+            ) : (
+              <a
+                key={`${button.type}-${button.url}-mobile`}
+                href={button.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={
+                  button.type === "directions"
+                    ? "inline-flex items-center justify-center gap-1 rounded-xl border border-amber-100/80 bg-gradient-to-r from-[#b87918] via-[#f3c45b] to-[#c58a1f] px-3 py-1.5 text-xs font-bold text-[#2d1c12] shadow-lg ring-1 ring-white/25 transition-all hover:bg-amber-400"
+                    : "inline-flex items-center justify-center gap-1 rounded-xl border border-blue-200/70 bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg transition-all hover:bg-blue-700"
+                }
+              >
+                {button.type === "directions" ? (
+                  <Navigation className="h-4 w-4" />
+                ) : (
+                  <Video className="h-4 w-4" />
+                )}
+                <span>{button.label}</span>
+              </a>
+            )
           ))}
         </div>
       )}

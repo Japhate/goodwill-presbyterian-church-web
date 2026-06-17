@@ -586,11 +586,11 @@ export default function Updates() {
                     }`}
                   >
                     {item.image_upload ? (
-                      <div className="flex aspect-[16/10] w-full shrink-0 items-center justify-center overflow-hidden bg-white p-2 md:h-full md:w-[32%] xl:w-[30%]">
+                      <div className="flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden bg-white p-2 md:h-full md:w-[32%] xl:w-[30%]">
                         <img src={item.image_upload} alt={item.title} className="h-full w-full object-contain object-left" />
                       </div>
                     ) : null}
-                    <div className="flex min-h-0 flex-grow flex-col p-4 md:h-full md:overflow-hidden md:p-4 xl:px-5 xl:py-4">
+                    <div className="flex min-h-0 flex-grow flex-col p-4 md:h-full md:overflow-hidden md:py-2 md:pl-2 md:pr-4 xl:py-2 xl:pl-2 xl:pr-5">
                       <div className="min-h-0 md:h-full md:overflow-y-auto md:pr-2">
                       <div className="mb-2 flex items-start justify-between gap-2">
                           <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
