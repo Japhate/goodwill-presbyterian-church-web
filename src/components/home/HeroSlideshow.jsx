@@ -901,12 +901,7 @@ export default function HeroSlideshow({ onReady }) {
                   )}
                   {externalActionButtons.map((button) => (
                     button.type === "virtual" && button.countdown ? (
-                      <div key={`${button.type}-${button.url}`} className="flex shrink-0 flex-col items-center gap-1">
-                        <div className="inline-flex items-center gap-1 rounded-full border border-blue-100/60 bg-white/92 px-2 py-0.5 text-[10px] font-bold leading-none text-blue-900 shadow-[0_8px_22px_rgba(0,0,0,0.22)] ring-1 ring-blue-200/40 backdrop-blur-sm md:px-2.5 md:py-1 md:text-xs">
-                          <Clock className="h-3 w-3 text-blue-600" />
-                          <span className="text-blue-700">Starts in</span>
-                          <span className="tabular-nums text-blue-950">{button.countdown}</span>
-                        </div>
+                      <div key={`${button.type}-${button.url}`} className="flex shrink-0 items-center gap-1.5">
                         <a
                           href={button.url}
                           target="_blank"
@@ -917,6 +912,11 @@ export default function HeroSlideshow({ onReady }) {
                           <Video className="w-4 h-4" />
                           <span>{button.label}</span>
                         </a>
+                        <div className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/80 bg-gradient-to-r from-white via-blue-50 to-white px-2 py-1 text-[10px] font-extrabold leading-none text-blue-950 shadow-[0_10px_26px_rgba(0,0,0,0.32),0_0_18px_rgba(59,130,246,0.32)] ring-1 ring-blue-300/70 backdrop-blur-sm sm:rounded-xl sm:px-2.5 sm:py-1.5 sm:text-xs md:px-3 md:py-2">
+                          <Clock className="h-3 w-3 text-blue-600 md:h-3.5 md:w-3.5" />
+                          <span className="text-blue-700">Starts in</span>
+                          <span className="tabular-nums text-blue-950">{button.countdown}</span>
+                        </div>
                       </div>
                     ) : (
                       <a
@@ -975,12 +975,7 @@ export default function HeroSlideshow({ onReady }) {
           )}
           {externalActionButtons.map((button) => (
             button.type === "virtual" && button.countdown ? (
-              <div key={`${button.type}-${button.url}-mobile`} className="flex flex-col items-center gap-1">
-                <div className="inline-flex items-center gap-1 rounded-full border border-blue-100/70 bg-white px-2 py-0.5 text-[10px] font-bold leading-none text-blue-900 shadow-sm">
-                  <Clock className="h-3 w-3 text-blue-600" />
-                  <span>Starts in</span>
-                  <span className="tabular-nums">{button.countdown}</span>
-                </div>
+              <div key={`${button.type}-${button.url}-mobile`} className="flex items-center gap-1.5">
                 <a
                   href={button.url}
                   target="_blank"
@@ -990,6 +985,11 @@ export default function HeroSlideshow({ onReady }) {
                   <Video className="h-4 w-4" />
                   <span>{button.label}</span>
                 </a>
+                <div className="inline-flex items-center gap-1 rounded-xl border border-white/80 bg-gradient-to-r from-white via-blue-50 to-white px-2 py-1 text-[10px] font-extrabold leading-none text-blue-950 shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-blue-300/70">
+                  <Clock className="h-3 w-3 text-blue-600" />
+                  <span>Starts in</span>
+                  <span className="tabular-nums">{button.countdown}</span>
+                </div>
               </div>
             ) : (
               <a
