@@ -165,6 +165,7 @@ export default function Updates() {
   const [activeSection, setActiveSection] = useState("");
   const [now, setNow] = useState(new Date());
   const [copiedContactId, setCopiedContactId] = useState("");
+  const [announcementOrderRanks, setAnnouncementOrderRanks] = useState({});
   const location = useLocation();
   const activeSpecialServiceNotice = getActiveSpecialServiceNotice(now);
   const inPersonOnlyNotice = activeSpecialServiceNotice?.liveStreamAvailable === false ? activeSpecialServiceNotice : null;
@@ -265,12 +266,26 @@ export default function Updates() {
 
         return true;
       });
+      const activeHeroSlideOrderEntries = heroSlideRes
+        .filter((slide) => slide.is_active !== false)
+        .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+        .flatMap((slide, index) => {
+          const rank = index + 1;
+          const linkedId = slide.announcement_id ? `id:${String(slide.announcement_id)}` : "";
+          const titleKey = normalizeMatchText(slide.alt_text);
+          return [
+            linkedId && [linkedId, rank],
+            titleKey && [`title:${titleKey}`, rank],
+          ].filter(Boolean);
+        });
+      setAnnouncementOrderRanks(Object.fromEntries(activeHeroSlideOrderEntries));
       setFeedItems(visibleAnnouncements);
       setWorshipEvents(worshipEventsRes);
     } catch (error) {
       console.error("Error loading page data:", error);
       setFeedItems([]);
       setWorshipEvents([]);
+      setAnnouncementOrderRanks({});
     } finally {
       setLoading(false);
     }
@@ -285,6 +300,12 @@ export default function Updates() {
       return status === "active" || status === "timeless" || !status;
     });
     
+    const getAnnouncementAdminRank = (item) => {
+      const idRank = announcementOrderRanks[`id:${String(item.id || "")}`];
+      if (idRank) return idRank;
+      return announcementOrderRanks[`title:${normalizeMatchText(item.title)}`] || Number.MAX_SAFE_INTEGER;
+    };
+
     return currentEvents.filter(item => {
       // Timeless items always show regardless of date
       if (String(item.status || "").trim().toLowerCase() === 'timeless') return true;
@@ -296,15 +317,22 @@ export default function Updates() {
     }).sort((a, b) => {
       const aDate = parseDateAsLocal(a.date);
       const bDate = parseDateAsLocal(b.date);
+      const aAdminRank = getAnnouncementAdminRank(a);
+      const bAdminRank = getAnnouncementAdminRank(b);
+      const aHasAdminRank = aAdminRank !== Number.MAX_SAFE_INTEGER;
+      const bHasAdminRank = bAdminRank !== Number.MAX_SAFE_INTEGER;
       const aHasDate = !!aDate;
       const bHasDate = !!bDate;
 
+      if (aHasAdminRank && bHasAdminRank) return aAdminRank - bAdminRank;
+      if (aHasAdminRank && !bHasAdminRank) return -1;
+      if (!aHasAdminRank && bHasAdminRank) return 1;
       if (!aHasDate && bHasDate) return -1;
       if (aHasDate && !bHasDate) return 1;
       if (!aHasDate && !bHasDate) return 0;
       return bDate.getTime() - aDate.getTime();
     });
-  }, [feedItems, today]);
+  }, [announcementOrderRanks, feedItems, today]);
 
   const sortedPastEvents = useMemo(() => {
     // Only show Inactive status in past events
