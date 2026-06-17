@@ -1259,12 +1259,12 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex flex-col justify-center p-2.5 md:p-6 lg:p-10">
-                <div className="mb-1.5 flex flex-wrap items-center gap-2 md:mb-3 md:block">
-                  <div className="inline-flex w-fit shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 md:mb-4 md:gap-2 md:px-3 md:py-1.5 md:text-xs">
+                <div className="mb-1.5 flex items-start justify-between gap-2 md:mb-3 md:block">
+                  <div className="order-2 inline-flex w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 md:order-none md:mb-4 md:gap-2 md:px-3 md:py-1.5 md:text-xs">
                     <Play className="h-3 w-3 md:h-3.5 md:w-3.5" />
                     Featured Message
                   </div>
-                  <h3 className="min-w-0 flex-1 break-words text-lg font-bold leading-tight text-gray-950 md:mb-3 md:text-3xl lg:text-4xl">{latestSermon.title}</h3>
+                  <h3 className="order-1 min-w-0 flex-1 break-words text-lg font-bold leading-tight text-gray-950 md:order-none md:mb-3 md:text-3xl lg:text-4xl">{latestSermon.title}</h3>
                 </div>
                 <div className="mb-2 grid gap-1 text-sm text-gray-700 sm:grid-cols-2 md:mb-4 md:gap-2">
                     {latestSermon.speaker && (
