@@ -1062,13 +1062,13 @@ export default function Resources() {
         </section>
 
         {/* Bulletins Section */}
-        <section id="bulletins" className="py-4 scroll-mt-[160px] md:scroll-mt-[144px]" style={{ background: '#fdf8f0' }}>
+        <section id="bulletins" className="py-2 scroll-mt-[160px] md:scroll-mt-[144px]" style={{ background: '#fdf8f0' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center border-t pt-12">Worship Bulletins</h2>
+              <h2 className="border-t pt-5 text-center text-3xl font-bold text-gray-900 mb-3 md:pt-6 md:mb-4">Worship Bulletins</h2>
               <>
                 {currentBulletin && (
-                  <div className="mb-16">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Current Bulletin</h3>
+                  <div className="mb-10 md:mb-12">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3 text-center">Current Bulletin</h3>
                     <Card className="grid grid-cols-1 md:grid-cols-2 overflow-hidden shadow-2xl max-w-4xl mx-auto hover:shadow-amber-200 transition-shadow duration-300">
                       <div className="p-6 flex flex-col justify-center order-2 md:order-1">
                           <CardContent className="p-0">
