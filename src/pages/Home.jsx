@@ -610,14 +610,14 @@ export default function Home() {
       <SitePopupModal popup={activeSitePopup} />
       {/* Live Events Banner - Fixed at very top */}
       {liveEvents.length > 0 && (
-        <div className="fixed top-20 left-0 right-0 z-50 bg-gradient-to-r from-red-600 to-red-700 text-white py-1 shadow-lg">
+        <div className="relative sm:fixed sm:top-20 left-0 right-0 z-50 bg-gradient-to-r from-red-600 to-red-700 text-white py-1 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-4 text-[11px] sm:text-sm">
+              <div className="flex flex-wrap items-center gap-1 md:gap-2">
                 <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                <span className="font-bold uppercase tracking-wider text-sm">HAPPENING NOW</span>
+                <span className="font-bold uppercase tracking-wider">HAPPENING NOW</span>
               </div>
-              <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4">
+              <div className="flex flex-col md:flex-row items-center gap-1 md:gap-4">
                 {liveEvents.map((event) => (
                   <div key={event.id} className="flex flex-col sm:flex-row items-center gap-2 text-sm">
                     <div className="text-center md:text-left">
