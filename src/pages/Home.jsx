@@ -34,6 +34,29 @@ function normalizeNewsletterName(name) {
   return String(name || "").trim().replace(/\s+/g, " ");
 }
 
+function parseLocalEventDateTime(dateValue, timeValue) {
+  if (!dateValue || !timeValue) return null;
+
+  const [year, month, day] = String(dateValue).split("-").map(Number);
+  const [hour, minute] = String(timeValue).split(":").map(Number);
+
+  if (!year || !month || !day || !Number.isFinite(hour) || !Number.isFinite(minute)) {
+    return null;
+  }
+
+  const date = new Date(year, month - 1, day, hour, minute, 0, 0);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isAnnouncementLiveNow(announcement, now) {
+  const start = parseLocalEventDateTime(announcement.date, announcement.time);
+  const end = parseLocalEventDateTime(announcement.end_date || announcement.date, announcement.end_time);
+
+  if (!start || !end || end <= start) return false;
+
+  return now >= start && now < end;
+}
+
 async function getApiErrorMessage(response, fallback) {
   const body = await response.json().catch(() => null);
   return [body?.error, body?.detail].filter(Boolean).join(" ") || fallback;
@@ -232,16 +255,8 @@ export default function Home() {
         return;
       }
 
-      const currentDay = format(now, 'yyyy-MM-dd');
-      const currentTime = format(now, 'HH:mm');
-
       const live = announcements.filter(announcement => {
-        if (!announcement.date || !announcement.time || !announcement.end_time) return false;
-
-        const eventDate = format(parseISO(announcement.date), 'yyyy-MM-dd');
-        if (eventDate !== currentDay) return false;
-
-        return currentTime >= announcement.time && currentTime <= announcement.end_time;
+        return isAnnouncementLiveNow(announcement, now);
       });
 
       const uniqueLive = live.filter((event, index, self) =>
