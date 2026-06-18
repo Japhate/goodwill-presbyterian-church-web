@@ -192,6 +192,13 @@ function isTimedBibleStudyBanner(banner) {
     || banner?.message === LIVE_BIBLE_STUDY_BANNER_MESSAGE;
 }
 
+function getAutomaticBannerMessage(slide = {}, source = {}, sourceTitle = '', isZoomSlide = false) {
+  const customMessage = String(source.live_banner_message || slide.live_banner_message || '').trim();
+  if (customMessage) return customMessage;
+  if (isZoomSlide) return LIVE_BIBLE_STUDY_BANNER_MESSAGE;
+  return `\u{1F534} ${sourceTitle} is happening now.`;
+}
+
 function getAdminScheduleLabel(event = {}) {
   const startDate = formatAdminDate(event.date);
   const endDate = event.end_date && event.end_date !== event.date ? formatAdminDate(event.end_date) : '';
@@ -2288,7 +2295,7 @@ export default function AdminPage() {
         source,
         sourceTitle,
         sourceLabel: announcement ? 'Hero slide linked announcement' : 'Hero slide schedule',
-        message: isZoomSlide ? LIVE_BIBLE_STUDY_BANNER_MESSAGE : `\u{1F534} ${sourceTitle} is happening now.`,
+        message: getAutomaticBannerMessage(slide, source, sourceTitle, isZoomSlide),
         scheduleLabel: getAdminScheduleLabel(source),
         isEnabled,
         isLiveNow: isEnabled && isAdminEventLiveNow(source),
@@ -2304,6 +2311,36 @@ export default function AdminPage() {
     if (banner?.announcement) {
       handleEdit(banner.announcement, 'announcement');
     }
+  };
+  const handleUpdateAutomaticBannerMessage = async (banner, message) => {
+    const nextMessage = String(message || '').trim();
+    if (!banner || !nextMessage) return;
+
+    if (banner.announcement?.id) {
+      const { id: _id, ...announcementData } = banner.announcement;
+      await AnnouncementsEvents.update(banner.announcement.id, {
+        ...announcementData,
+        live_banner_message: nextMessage,
+      });
+    } else if (banner.slide?.id) {
+      const { id: _id, ...slideData } = banner.slide;
+      await HeroSlide.update(banner.slide.id, {
+        ...slideData,
+        live_banner_message: nextMessage,
+      });
+    } else {
+      return;
+    }
+
+    await logAdminActivity({
+      action: 'updated',
+      section: 'Homepage Banner',
+      itemType: 'automatic live banner message',
+      itemId: banner.announcement?.id || banner.slide?.id || '',
+      itemLabel: banner.sourceTitle || nextMessage,
+      details: { message: nextMessage },
+    });
+    await Promise.all([loadHeroSlides(), loadAnnouncements()]);
   };
   const HeroAnnouncementSectionHeader = ({
     title,
@@ -2488,6 +2525,7 @@ export default function AdminPage() {
           onAddNew={() => handleAddNew('banner')}
           onDuplicate={(item) => handleDuplicate(item, 'banner')}
           onEditAutomaticBanner={handleEditAutomaticBanner}
+          onUpdateAutomaticBannerMessage={handleUpdateAutomaticBannerMessage}
         />;
       case 'heroSlides':
         return (

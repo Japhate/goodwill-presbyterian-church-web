@@ -181,6 +181,18 @@ function isTimedBibleStudyBanner(banner) {
     || banner?.message === LIVE_BIBLE_STUDY_BANNER_MESSAGE;
 }
 
+function getLiveScheduledBannerMessage(slide = {}, event = {}) {
+  const customMessage = String(event.live_banner_message || slide.live_banner_message || "").trim();
+  if (customMessage) return customMessage;
+
+  if (isZoomBibleStudySlide(slide) || isTimedBibleStudyBanner(event)) {
+    return LIVE_BIBLE_STUDY_BANNER_MESSAGE;
+  }
+
+  const title = String(event?.title || slide?.alt_text || "").trim();
+  return title ? `\u{1F534} ${title} is happening now.` : "";
+}
+
 function isPrioritySlideActive(slide, now) {
   if (!slide?.is_priority_announcement) return false;
 
@@ -480,13 +492,7 @@ export default function HeroSlideshow({ onReady }) {
     if (activeSpecialServiceNotice) return [activeSpecialServiceNotice.message];
     if (liveScheduledSlides.length > 0) {
       return liveScheduledSlides
-        .map(({ slide, event }) => {
-          if (isZoomBibleStudySlide(slide) || isTimedBibleStudyBanner(event)) {
-            return LIVE_BIBLE_STUDY_BANNER_MESSAGE;
-          }
-          const title = String(event?.title || slide?.alt_text || "").trim();
-          return title ? `\u{1F534} ${title} is happening now.` : "";
-        })
+        .map(({ slide, event }) => getLiveScheduledBannerMessage(slide, event))
         .filter(Boolean);
     }
 
