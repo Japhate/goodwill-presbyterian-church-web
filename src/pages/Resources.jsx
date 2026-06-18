@@ -12,6 +12,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { getActiveSpecialServiceNotice, getSpecialServiceDateTime } from "@/lib/specialServiceNotice";
 import PageLoadingScreen from "@/components/PageLoadingScreen";
 
+const SERMON_BACKGROUND_VIDEO_URL = "/videos/latest-sermon-spiritual-skies.mp4";
+
 // Helper function to extract video ID from YouTube URL
 const getYoutubeVideoId = (url) => {
   if (!url) return null;
@@ -797,9 +799,22 @@ export default function Resources() {
         </section>
 
         {/* Latest Sermon Section */}
-        <section id="latest-sermon" className="py-4 scroll-mt-[160px] md:scroll-mt-[144px]" style={{ background: '#fdf8f0' }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Latest Sermon</h2>
+        <section id="latest-sermon" className="relative isolate overflow-hidden py-4 scroll-mt-[160px] md:scroll-mt-[144px]">
+          <video
+            className="absolute inset-0 z-0 h-full w-full object-cover opacity-90"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            aria-hidden="true"
+          >
+            <source src={SERMON_BACKGROUND_VIDEO_URL} type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#102821]/85 via-[#3f2a1f]/72 to-[#f1d58c]/42" aria-hidden="true"></div>
+          <div className="absolute inset-0 z-0 bg-white/18 backdrop-blur-[1px]" aria-hidden="true"></div>
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold text-white mb-8 text-center drop-shadow-[0_3px_12px_rgba(0,0,0,0.75)]">Latest Sermon</h2>
             {latestSermon ? (
               <Card className="overflow-hidden shadow-xl max-w-5xl mx-auto">
                 <CardHeader>
