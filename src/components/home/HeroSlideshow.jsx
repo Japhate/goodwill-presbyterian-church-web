@@ -284,7 +284,7 @@ function advanceRecurringDate(date, step) {
 function getVirtualEventTiming(event, now) {
   const start = getEventStartDateTime(event);
   const end = getEventEndDateTime(event, start);
-  if (!start || !end) return { countdown: "", isLive: false };
+  if (!start || !end) return { countdown: "", isLive: false, start: null, end: null };
 
   const step = getRecurringStep(event?.frequency);
   let nextStart = start;
@@ -300,14 +300,14 @@ function getVirtualEventTiming(event, now) {
   }
 
   if (now >= nextStart && now < nextEnd) {
-    return { countdown: "", isLive: true };
+    return { countdown: "", isLive: true, start: nextStart, end: nextEnd };
   }
 
   if (now < nextStart) {
-    return { countdown: getCountdownLabel(nextStart, now, nextEnd), isLive: false };
+    return { countdown: getCountdownLabel(nextStart, now, nextEnd), isLive: false, start: nextStart, end: nextEnd };
   }
 
-  return { countdown: "", isLive: false };
+  return { countdown: "", isLive: false, start: null, end: null };
 }
 
 function warmHeroImage(url) {
@@ -342,7 +342,7 @@ function getNextBibleStudy(now) {
   return { start: wed, end: wedEnd };
 }
 
-function ZoomCountdownOverlay() {
+function ZoomCountdownOverlay({ event, fallbackSchedule = null }) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -350,12 +350,16 @@ function ZoomCountdownOverlay() {
     return () => clearInterval(interval);
   }, []);
 
-  const { start, end } = useMemo(() => getNextBibleStudy(now), [now]);
+  const eventTiming = useMemo(() => getVirtualEventTiming(event, now), [event, now]);
+  const start = eventTiming.start || fallbackSchedule?.start;
+  const end = eventTiming.end || fallbackSchedule?.end;
+  if (!start || !end) return null;
 
-  const isOngoing = now >= start && now < end;                    // Wed 6:00-7:00 PM
+  const isOngoing = eventTiming.isLive || (now >= start && now < end);
 
   const msUntilStart = Math.max(0, start - now);
   const totalSeconds = Math.floor(msUntilStart / 1000);
+  const overlayTitle = event?.alt_text || event?.title || "Next Virtual Event";
   return (
     <div className="absolute bottom-2 right-3 z-20 flex justify-end">
       <div className="bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1.5 flex flex-col items-center gap-0.5 shadow-xl border border-white/20">
@@ -365,7 +369,7 @@ function ZoomCountdownOverlay() {
           <>
             <div className="flex items-center gap-1 text-amber-300 text-[10px] font-semibold">
               <Clock className="w-2.5 h-2.5 flex-shrink-0" />
-              Next Bible Study
+              {overlayTitle}
             </div>
             <div className="text-white text-[10px] font-semibold">{format(start, "MMMM dd")}</div>
             <div className="flex items-center gap-1.5 tabular-nums">
@@ -376,7 +380,7 @@ function ZoomCountdownOverlay() {
                 { val: totalSeconds % 60, label: "s" },
               ].map(({ val, label }) => (
                 <div key={label} className="flex flex-col items-center">
-                  <span className="text-white font-bold text-xs leading-none">{String(val).padStart(2, "0")}</span>
+                  <span className="text-red-500 font-bold text-xs leading-none">{String(val).padStart(2, "0")}</span>
                   <span className="text-amber-300 text-[9px] uppercase">{label}</span>
                 </div>
               ))}
@@ -595,6 +599,11 @@ export default function HeroSlideshow({ onReady }) {
   const bibleStudySchedule = getNextBibleStudy(now);
   const isBibleStudyLive = isZoomBibleStudySlide(currentSlide) && now >= bibleStudySchedule.start && now < bibleStudySchedule.end;
   const virtualEventIsLive = linkedVirtualTiming.isLive || isBibleStudyLive;
+  const virtualCountdownEvent = linkedVirtualEvent?.date ? linkedVirtualEvent : currentSlide;
+  const showVirtualCountdownOverlay = SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY
+    && !showWelcomeHeroIntro
+    && (virtualSlideUrl || isZoomBibleStudySlide(currentSlide) || linkedVirtualUrl)
+    && (virtualCountdownEvent?.date || isZoomBibleStudySlide(currentSlide));
   const explicitSlideUrl = currentSlide?.link_url || "";
   const isExplicitExternalUrl = /^https?:\/\//i.test(explicitSlideUrl);
   const internalSlideUrl = !welcomeHeroUrl && explicitSlideUrl.startsWith("/") ? explicitSlideUrl : "";
@@ -1036,8 +1045,11 @@ export default function HeroSlideshow({ onReady }) {
           </div>
 
           {/* Zoom Countdown Overlay — only on the Bible Study slide */}
-          {SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY && isZoomBibleStudySlide(currentSlide) && (
-            <ZoomCountdownOverlay />
+          {showVirtualCountdownOverlay && (
+            <ZoomCountdownOverlay
+              event={virtualCountdownEvent}
+              fallbackSchedule={isZoomBibleStudySlide(currentSlide) && !virtualCountdownEvent?.date ? bibleStudySchedule : null}
+            />
           )}
         </div>
       )}
