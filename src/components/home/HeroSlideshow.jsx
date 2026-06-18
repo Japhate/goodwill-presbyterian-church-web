@@ -269,7 +269,8 @@ function getEventStartDateTime(event) {
 function getEventEndDateTime(event, startDate) {
   if (!startDate) return null;
 
-  const endDateValue = event?.end_date || event?.date;
+  const hasRecurringStep = Boolean(getRecurringStep(event?.frequency));
+  const endDateValue = hasRecurringStep ? event?.date : (event?.end_date || event?.date);
   const [year, month, day] = String(endDateValue || "").split("-").map(Number);
   if (!year || !month || !day) return new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
 
@@ -284,6 +285,17 @@ function getEventEndDateTime(event, startDate) {
   }
 
   return new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+}
+
+function getRecurringUntilDateTime(event) {
+  if (!event?.end_date) return null;
+
+  const [year, month, day] = String(event.end_date).split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  const [hour = 23, minute = 59] = String(event.end_time || "23:59").split(":").map(Number);
+  const until = new Date(year, month - 1, day, hour || 0, minute || 0, 59);
+  return Number.isNaN(until.getTime()) ? null : until;
 }
 
 function getCountdownLabel(targetDate, now, targetEndDate = null) {
@@ -341,6 +353,7 @@ function getVirtualEventTiming(event, now) {
   const step = getRecurringStep(event?.frequency);
   let nextStart = start;
   let nextEnd = end;
+  const recurringUntil = step ? getRecurringUntilDateTime(event) : null;
 
   if (step) {
     let guard = 0;
@@ -348,6 +361,10 @@ function getVirtualEventTiming(event, now) {
       nextStart = advanceRecurringDate(nextStart, step);
       nextEnd = advanceRecurringDate(nextEnd, step);
       guard += 1;
+    }
+
+    if (recurringUntil && nextStart > recurringUntil) {
+      return { countdown: "", isLive: false, start: null, end: null };
     }
   }
 
