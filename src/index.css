@@ -213,39 +213,3 @@ button:focus-visible {
     animation-duration: 22s;
   }
 }
-
-.sermon-motion-section {
-  background: linear-gradient(115deg, #12362f 0%, #2f4f47 34%, #c2a24a 72%, #4b342a 100%);
-}
-
-.sermon-motion-section::before,
-.sermon-motion-section::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.sermon-motion-section::before {
-  z-index: 0;
-  background:
-    radial-gradient(ellipse at 18% 18%, rgba(255, 248, 221, 0.2) 0%, rgba(255, 248, 221, 0.08) 18%, transparent 44%),
-    radial-gradient(ellipse at 72% 40%, rgba(194, 162, 74, 0.18) 0%, rgba(194, 162, 74, 0.08) 22%, transparent 52%),
-    linear-gradient(104deg, transparent 0 24%, rgba(255, 255, 255, 0.16) 34%, transparent 49% 100%);
-  background-size: 110% 110%, 120% 120%, 100% 100%;
-  opacity: 0.48;
-}
-
-.sermon-motion-section::after {
-  z-index: 0;
-  background:
-    linear-gradient(115deg, transparent 0 18%, rgba(255, 255, 255, 0.12) 24%, transparent 34% 100%),
-    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 120px);
-  opacity: 0.28;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sermon-motion-section video {
-    display: none;
-  }
-}

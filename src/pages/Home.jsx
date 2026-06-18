@@ -13,8 +13,6 @@ import { SitePopups } from "@/entities/SitePopups";
 import SitePopupModal, { getActivePopup } from "@/components/home/SitePopupModal";
 import HeritageSealLoader from "@/components/HeritageSealLoader";
 
-const SERMON_BACKGROUND_VIDEO_URL = "/videos/latest-sermon-spiritual-skies.mp4";
-
 function createUnsubscribeToken() {
   const bytes = new Uint8Array(18);
 
@@ -64,7 +62,6 @@ export default function Home() {
   const [playingSermonId, setPlayingSermonId] = useState(null); // To prevent multiple videos playing simultaneously
   const [hasLiveSermon, setHasLiveSermon] = useState(false); // NEW: Track if there's a Live sermon in DB
   const [liveSermon, setLiveSermon] = useState(null); // NEW: Store the actual live sermon object
-  const [shouldLoadSermonBgVideo, setShouldLoadSermonBgVideo] = useState(false);
   const [isHomeDataReady, setIsHomeDataReady] = useState(false);
   const [isHeroReady, setIsHeroReady] = useState(false);
   const [isLoaderMinimumDone, setIsLoaderMinimumDone] = useState(false);
@@ -291,46 +288,6 @@ export default function Home() {
       }
     };
   }, [announcements, latestSermon, isLive]);
-
-  useEffect(() => {
-    const sermonSection = document.getElementById("latest-sermon");
-    if (!sermonSection) return;
-    const reduceMotionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    const saveData = navigator.connection?.saveData === true;
-
-    if (reduceMotionQuery?.matches || saveData) return;
-
-    let loadTimer;
-    let idleCallbackId;
-    const scheduleVideoLoad = () => {
-      loadTimer = window.setTimeout(() => {
-        if ("requestIdleCallback" in window) {
-          idleCallbackId = window.requestIdleCallback(() => setShouldLoadSermonBgVideo(true), { timeout: 1500 });
-          return;
-        }
-
-        setShouldLoadSermonBgVideo(true);
-      }, 1200);
-    };
-
-    const videoObserver = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        scheduleVideoLoad();
-        videoObserver.disconnect();
-      },
-      { rootMargin: "180px 0px" }
-    );
-
-    videoObserver.observe(sermonSection);
-    return () => {
-      videoObserver.disconnect();
-      window.clearTimeout(loadTimer);
-      if (idleCallbackId && "cancelIdleCallback" in window) {
-        window.cancelIdleCallback(idleCallbackId);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -1074,31 +1031,16 @@ export default function Home() {
 
 
       {/* Latest Sermon Section - Now shows Live Stream during service time */}
-      <section id="latest-sermon" className="sermon-motion-section relative isolate overflow-hidden scroll-mt-[160px] py-3 md:py-10 md:scroll-mt-[144px] fade-in-section">
-        {shouldLoadSermonBgVideo && (
-          <video
-            className="absolute inset-0 z-0 h-full w-full object-cover opacity-90"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="none"
-            aria-hidden="true"
-          >
-            <source src={SERMON_BACKGROUND_VIDEO_URL} type="video/mp4" />
-          </video>
-        )}
-        <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#102821]/85 via-[#3f2a1f]/72 to-[#f1d58c]/42" aria-hidden="true"></div>
-        <div className="absolute inset-0 z-0 bg-white/18 backdrop-blur-[1px]" aria-hidden="true"></div>
+      <section id="latest-sermon" className="relative isolate overflow-hidden scroll-mt-[160px] py-4 md:py-10 md:scroll-mt-[144px] fade-in-section" style={{ background: '#fdf8f0' }}>
         <div className="relative z-10 mx-auto max-w-[88rem] px-4 sm:px-6 lg:px-8">
           {!inPersonOnlyNotice && (
             <div className="mb-3 flex flex-col gap-2 md:mb-7 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="text-2xl font-bold leading-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.75)] md:text-4xl">
+                <h2 className="text-2xl font-bold leading-tight text-gray-900 md:text-4xl">
                   Latest Sermon
                 </h2>
               </div>
-              <p className="max-w-xl rounded-md border border-white/20 bg-black/28 px-3 py-2 text-xs font-medium leading-5 text-white shadow-[0_12px_34px_rgba(0,0,0,0.18)] backdrop-blur-[2px] md:px-4 md:py-3 md:text-right md:text-sm md:leading-6">
+              <p className="max-w-xl rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs font-medium leading-5 text-gray-700 shadow-sm md:px-4 md:py-3 md:text-right md:text-sm md:leading-6">
                 Watch the most recent message or continue into the sermon library for more worship recordings.
               </p>
             </div>

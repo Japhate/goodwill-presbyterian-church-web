@@ -223,11 +223,33 @@ function getEventStartDateTime(event) {
   return Number.isNaN(start.getTime()) ? null : start;
 }
 
-function getCountdownLabel(targetDate, now) {
+function getEventEndDateTime(event, startDate) {
+  if (!startDate) return null;
+
+  const endDateValue = event?.end_date || event?.date;
+  const [year, month, day] = String(endDateValue || "").split("-").map(Number);
+  if (!year || !month || !day) return new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+
+  if (event?.end_time) {
+    const [hour = 0, minute = 0] = String(event.end_time).split(":").map(Number);
+    const end = new Date(year, month - 1, day, hour || 0, minute || 0, 0);
+    return Number.isNaN(end.getTime()) ? null : end;
+  }
+
+  if (event?.end_date && event.end_date !== event.date) {
+    return new Date(year, month - 1, day, 23, 59, 59);
+  }
+
+  return new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+}
+
+function getCountdownLabel(targetDate, now, targetEndDate = null) {
   if (!targetDate) return "";
 
+  if (targetEndDate && now >= targetEndDate) return "";
+
   const diffMs = targetDate.getTime() - now.getTime();
-  if (diffMs <= 0) return "Live now";
+  if (diffMs <= 0) return targetEndDate ? "Live now" : "";
 
   const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
   const days = Math.floor(totalSeconds / 86400);
@@ -520,9 +542,17 @@ export default function HeroSlideshow({ onReady }) {
   const virtualSlideUrl = ["virtual", "both"].includes(linkedLocationType) && linkedVirtualPlatform && linkedVirtualUrl
     ? linkedVirtualUrl
     : "";
-  const linkedVirtualStartDate = getEventStartDateTime(linkedAnnouncement || currentSlide);
-  const bibleStudyStartDate = getNextBibleStudy(now).start;
-  const virtualCountdownLabel = getCountdownLabel(linkedVirtualStartDate || (isZoomBibleStudySlide(currentSlide) ? bibleStudyStartDate : null), now);
+  const linkedVirtualEvent = linkedAnnouncement || currentSlide;
+  const linkedVirtualStartDate = getEventStartDateTime(linkedVirtualEvent);
+  const linkedVirtualEndDate = getEventEndDateTime(linkedVirtualEvent, linkedVirtualStartDate);
+  const bibleStudySchedule = getNextBibleStudy(now);
+  const virtualCountdownLabel = linkedVirtualStartDate
+    ? getCountdownLabel(linkedVirtualStartDate, now, linkedVirtualEndDate)
+    : getCountdownLabel(
+        isZoomBibleStudySlide(currentSlide) ? bibleStudySchedule.start : null,
+        now,
+        isZoomBibleStudySlide(currentSlide) ? bibleStudySchedule.end : null
+      );
   const explicitSlideUrl = currentSlide?.link_url || "";
   const isExplicitExternalUrl = /^https?:\/\//i.test(explicitSlideUrl);
   const internalSlideUrl = !welcomeHeroUrl && explicitSlideUrl.startsWith("/") ? explicitSlideUrl : "";
