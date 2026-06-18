@@ -481,17 +481,6 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="sm:col-span-2 rounded-md border border-amber-200 bg-amber-50 p-3">
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Automatic Banner Message</label>
-              <Input
-                value={relatedAnnouncementDraft.live_banner_message || ""}
-                onChange={(e) => handleRelatedAnnouncementChange("live_banner_message", e.target.value)}
-                placeholder="e.g. Our Zoom Bible Study is happening now. Click the Zoom button to join us."
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Used by the homepage automatic live banner when this slide or announcement is currently live.
-              </p>
-            </div>
             <ConfirmedDateTimePicker
               id="related_start_date"
               label="Start Date"
@@ -675,6 +664,18 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                       <p className="text-xs text-gray-500 truncate">Current attachment: {relatedAnnouncementDraft.file_upload}</p>
                     </div>
                   )}
+                </div>
+                <div className="rounded-md border border-amber-300 bg-white p-3">
+                  <h4 className="text-sm font-bold text-amber-950">Automatic Live Banner</h4>
+                  <p className="mt-1 text-xs text-gray-600">
+                    This message appears on the homepage only while the schedule on the left is live.
+                  </p>
+                  <label className="mt-3 block text-xs font-semibold text-gray-700 mb-1">Banner Message</label>
+                  <Input
+                    value={relatedAnnouncementDraft.live_banner_message || ""}
+                    onChange={(e) => handleRelatedAnnouncementChange("live_banner_message", e.target.value)}
+                    placeholder="e.g. Our Zoom Bible Study is happening now. Click to join us."
+                  />
                 </div>
             </div>
           </div>
