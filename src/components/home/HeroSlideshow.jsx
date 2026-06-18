@@ -361,18 +361,18 @@ function ZoomCountdownOverlay({ event, fallbackSchedule = null }) {
   const totalSeconds = Math.floor(msUntilStart / 1000);
   const overlayTitle = event?.alt_text || event?.title || "Next Virtual Event";
   return (
-    <div className="absolute bottom-2 right-3 z-20 flex justify-end">
-      <div className="bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1.5 flex flex-col items-center gap-0.5 shadow-xl border border-white/20">
+    <div className="absolute bottom-1.5 right-1.5 z-20 flex justify-end sm:bottom-2 sm:right-3">
+      <div className="flex max-w-[8.75rem] flex-col items-center gap-0.5 rounded-md border border-white/20 bg-black/70 px-1.5 py-1 shadow-xl backdrop-blur-sm sm:max-w-none sm:rounded-lg sm:px-2 sm:py-1.5">
 
         {/* DEFAULT: full countdown to next session */}
         {!isOngoing && (
           <>
-            <div className="flex items-center gap-1 text-amber-300 text-[10px] font-semibold">
-              <Clock className="w-2.5 h-2.5 flex-shrink-0" />
-              {overlayTitle}
+            <div className="flex max-w-full items-center gap-0.5 truncate text-[8px] font-semibold leading-tight text-amber-300 sm:gap-1 sm:text-[10px]">
+              <Clock className="h-2 w-2 flex-shrink-0 sm:h-2.5 sm:w-2.5" />
+              <span className="truncate">{overlayTitle}</span>
             </div>
-            <div className="text-white text-[10px] font-semibold">{format(start, "MMMM dd")}</div>
-            <div className="flex items-center gap-1.5 tabular-nums">
+            <div className="text-[8px] font-semibold leading-tight text-white sm:text-[10px]">{format(start, "MMMM dd")}</div>
+            <div className="flex items-center gap-1 tabular-nums sm:gap-1.5">
               {[
                 { val: Math.floor(totalSeconds / 86400), label: "d" },
                 { val: Math.floor((totalSeconds % 86400) / 3600), label: "h" },
@@ -380,8 +380,8 @@ function ZoomCountdownOverlay({ event, fallbackSchedule = null }) {
                 { val: totalSeconds % 60, label: "s" },
               ].map(({ val, label }) => (
                 <div key={label} className="flex flex-col items-center">
-                  <span className="text-red-500 font-bold text-xs leading-none">{String(val).padStart(2, "0")}</span>
-                  <span className="text-amber-300 text-[9px] uppercase">{label}</span>
+                  <span className="text-[10px] font-bold leading-none text-red-500 sm:text-xs">{String(val).padStart(2, "0")}</span>
+                  <span className="text-[7px] uppercase text-amber-300 sm:text-[9px]">{label}</span>
                 </div>
               ))}
             </div>
@@ -391,17 +391,17 @@ function ZoomCountdownOverlay({ event, fallbackSchedule = null }) {
         {/* LIVE: 6:00-7:00 PM */}
         {isOngoing && (
           <>
-            <div className="flex items-center gap-1 text-green-300 text-[10px] font-semibold">
-              <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+            <div className="flex items-center gap-1 text-[9px] font-semibold text-green-300 sm:text-[10px]">
+              <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-400" />
               Live Now!
             </div>
             <a
               href={BIBLE_STUDY_ZOOM}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-2.5 py-1 rounded-full shadow transition-all text-[10px]"
+              className="flex items-center gap-1 rounded-full bg-blue-600 px-2 py-0.5 text-[9px] font-semibold text-white shadow transition-all hover:bg-blue-700 sm:px-2.5 sm:py-1 sm:text-[10px]"
             >
-              <Video className="w-3 h-3" />
+              <Video className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
               Join Zoom
             </a>
           </>
