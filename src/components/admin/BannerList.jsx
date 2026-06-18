@@ -149,13 +149,13 @@ export default function BannerList({
           </div>
         </section>
 
-        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-4">
+        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4">
           <div className="flex items-start gap-3">
             <CalendarClock className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
             <div>
               <h3 className="text-sm font-bold text-amber-950">Automatic Live Banners</h3>
-              <p className="mt-1 text-sm leading-6 text-amber-900">
-                These are generated from hero slide form schedules. Edit the full banner details here, or edit the same fields from the slide and announcement form.
+              <p className="mt-1 text-sm leading-5 text-amber-900">
+                Generated from hero slide schedules. Update the message and timing here, or open the source for every event detail.
               </p>
             </div>
           </div>
@@ -166,38 +166,43 @@ export default function BannerList({
             <h3 className="text-base font-bold text-gray-950">Automatic Live Banners</h3>
             <Badge className="bg-amber-600 text-white">{automaticBanners.length}</Badge>
           </div>
-          <div className="overflow-x-auto rounded-md border">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="text-left p-2">Source Slide</th>
-                  <th className="text-left p-2">Live Message</th>
-                  <th className="text-left p-2">Schedule</th>
-                  <th className="text-left p-2">State</th>
-                  <th className="text-right p-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {automaticBanners.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="p-4 text-center text-sm text-gray-500">
-                      No scheduled hero-slide live banners found.
-                    </td>
-                  </tr>
-                ) : (
-                  automaticBanners.map((banner) => {
+          <div className="space-y-3">
+            {automaticBanners.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-gray-500">
+                No scheduled hero-slide live banners found.
+              </div>
+            ) : (
+              automaticBanners.map((banner) => {
                     const isEditingMessage = editingAutomaticBannerId === banner.id;
                     const isSaving = savingAutomaticBannerId === banner.id;
 
                     return (
-                      <tr key={banner.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2 max-w-xs">
-                          <p className="truncate font-semibold text-gray-950">{banner.sourceTitle}</p>
-                          <p className="mt-1 text-xs text-gray-500">{banner.sourceLabel}</p>
-                        </td>
-                        <td className="p-2 max-w-md">
-                          {isEditingMessage ? (
-                            <div className="grid min-w-[34rem] grid-cols-1 gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 sm:grid-cols-2">
+                      <article key={banner.id} className="rounded-lg border bg-white p-4 shadow-sm">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="font-semibold text-gray-950">{banner.sourceTitle}</h4>
+                              <Badge className={banner.isEnabled ? (banner.isLiveNow ? "bg-red-600" : "bg-blue-600") : "bg-gray-400"}>
+                                {banner.isEnabled ? (banner.isLiveNow ? "Live Now" : "Scheduled") : "Disabled"}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500">{banner.sourceLabel}</p>
+                          </div>
+                          {!isEditingMessage && (
+                            <div className="flex flex-wrap gap-2">
+                              <Button onClick={() => beginAutomaticMessageEdit(banner)} variant="outline" size="sm" className="text-blue-600">
+                                <Pencil className="mr-1.5 h-4 w-4" /> Edit
+                              </Button>
+                              <Button onClick={() => onEditAutomaticBanner?.(banner)} variant="outline" size="sm" className="text-amber-700">
+                                <CalendarClock className="mr-1.5 h-4 w-4" /> Open Source
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+
+                        {isEditingMessage ? (
+                          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                               <label className="block text-xs font-semibold text-gray-700 sm:col-span-2">
                                 Message
                                 <Input
@@ -250,6 +255,13 @@ export default function BannerList({
                                   <option value="Draft">Draft</option>
                                 </select>
                               </label>
+                            </div>
+
+                            <details className="mt-4 border-t border-amber-200 pt-3">
+                              <summary className="cursor-pointer select-none text-sm font-semibold text-amber-900">
+                                Advanced location and contact details
+                              </summary>
+                              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                               <label className="block text-xs font-semibold text-gray-700">
                                 Location Type
                                 <select
@@ -311,68 +323,39 @@ export default function BannerList({
                                 Contact Phone
                                 <Input type="tel" value={automaticBannerDraft.contact_phone || ""} onChange={(event) => updateAutomaticBannerDraft("contact_phone", event.target.value)} className="mt-1 bg-white" />
                               </label>
-                            </div>
-                          ) : (
-                            <p className="truncate">{banner.message}</p>
-                          )}
-                        </td>
-                        <td className="p-2 text-sm text-gray-700">{banner.scheduleLabel}</td>
-                        <td className="p-2">
-                          <Badge className={banner.isEnabled ? (banner.isLiveNow ? "bg-red-600" : "bg-blue-600") : "bg-gray-400"}>
-                            {banner.isEnabled ? (banner.isLiveNow ? "Live Now" : "Scheduled") : "Disabled"}
-                          </Badge>
-                        </td>
-                        <td className="p-2 text-right">
-                          {isEditingMessage ? (
-                            <div className="flex justify-end gap-2">
+                              </div>
+                            </details>
+
+                            <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-amber-200 pt-4">
+                              <Button onClick={cancelAutomaticMessageEdit} variant="outline" size="sm" disabled={isSaving}>
+                                <X className="mr-1.5 h-4 w-4" /> Cancel
+                              </Button>
                               <Button
                                 onClick={() => saveAutomaticMessage(banner)}
-                                variant="outline"
                                 size="sm"
-                                className="text-green-700"
+                                className="bg-green-700 hover:bg-green-800"
                                 disabled={isSaving || !String(automaticBannerDraft.live_banner_message || "").trim()}
                               >
-                                <Check className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                onClick={cancelAutomaticMessageEdit}
-                                variant="outline"
-                                size="sm"
-                                className="text-gray-600"
-                                disabled={isSaving}
-                              >
-                                <X className="w-4 h-4" />
+                                <Check className="mr-1.5 h-4 w-4" /> {isSaving ? "Saving..." : "Save Banner"}
                               </Button>
                             </div>
-                          ) : (
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                onClick={() => beginAutomaticMessageEdit(banner)}
-                                variant="outline"
-                                size="sm"
-                                className="text-blue-600"
-                              >
-                                <Pencil className="w-4 h-4" />
-                                Edit Banner
-                              </Button>
-                              <Button
-                                onClick={() => onEditAutomaticBanner?.(banner)}
-                                variant="outline"
-                                size="sm"
-                                className="text-amber-700"
-                              >
-                                <CalendarClock className="w-4 h-4" />
-                                Source
-                              </Button>
+                          </div>
+                        ) : (
+                          <div className="mt-4 grid gap-3 border-t pt-3 md:grid-cols-[minmax(0,1fr)_minmax(14rem,auto)]">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Live message</p>
+                              <p className="mt-1 text-sm text-gray-800">{banner.message}</p>
                             </div>
-                          )}
-                        </td>
-                      </tr>
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Schedule</p>
+                              <p className="mt-1 text-sm text-gray-700">{banner.scheduleLabel}</p>
+                            </div>
+                          </div>
+                        )}
+                      </article>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
+              })
+            )}
           </div>
         </section>
       </CardContent>
