@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
 import { HeroSlide } from "@/entities/HeroSlide";
 import { WorshipEvent } from "@/entities/WorshipEvent";
-import { Calendar, Check, Clock, Copy, Mail, MapPin, Image, CheckCircle, ExternalLink, FileText, Phone } from "lucide-react";
+import { Calendar, Check, Clock, Copy, Mail, MapPin, Image, CheckCircle, ExternalLink, FileText, MessageCircle, Phone } from "lucide-react";
 import { format, isBefore, startOfDay, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
@@ -144,6 +144,7 @@ const getGoogleCalendarUrl = (item) => {
     item.frequency ? `Frequency: ${item.frequency}` : "",
     item.zoom_link ? `Link: ${item.zoom_link}` : "",
     item.meeting_id ? `Meeting ID: ${item.meeting_id}` : "",
+    item.chat_link ? `Chat: ${item.chat_link}` : "",
     item.meeting_passcode ? `Passcode: ${item.meeting_passcode}` : "",
     item.contact_email ? `Contact email: ${item.contact_email}` : "",
     item.contact_phone ? `Contact phone: ${item.contact_phone}` : "",
@@ -722,12 +723,18 @@ export default function Updates() {
                             </span>
                           </div>
                         )}
-                        {(item.zoom_link || item.directions_url || item.file_upload) && (
+                        {(item.zoom_link || item.chat_link || item.directions_url || item.file_upload) && (
                           <div className="flex flex-wrap gap-2 pt-2 sm:col-span-2">
                             {hasVirtualLocation(item) && item.zoom_link && (
                               <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 {getVirtualActionLabel(item.virtual_platform, item.zoom_link)}
+                              </a>
+                            )}
+                            {item.chat_link && (
+                              <a href={item.chat_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700">
+                                <MessageCircle className="h-3.5 w-3.5" />
+                                Chat
                               </a>
                             )}
                             {hasPhysicalLocation(item) && item.directions_url && (
@@ -981,12 +988,18 @@ export default function Updates() {
                             </div>
                           )}
                         </div>
-                        {(item.zoom_link || item.directions_url || item.file_upload) && (
+                        {(item.zoom_link || item.chat_link || item.directions_url || item.file_upload) && (
                           <div className="mt-4 flex flex-wrap gap-2">
                             {hasVirtualLocation(item) && item.zoom_link && (
                               <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 Open Link
+                              </a>
+                            )}
+                            {item.chat_link && (
+                              <a href={item.chat_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700">
+                                <MessageCircle className="h-3.5 w-3.5" />
+                                Chat
                               </a>
                             )}
                             {hasPhysicalLocation(item) && item.directions_url && (

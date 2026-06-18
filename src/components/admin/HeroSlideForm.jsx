@@ -22,6 +22,7 @@ const DEFAULT_RELATED_ANNOUNCEMENT = {
   location: "",
   virtual_platform: "",
   zoom_link: "",
+  chat_link: "",
   meeting_id: "",
   meeting_passcode: "",
   contact_email: "",
@@ -487,6 +488,10 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Link</label>
                   <Input type="url" value={relatedAnnouncementDraft.zoom_link} onChange={(e) => handleRelatedAnnouncementChange("zoom_link", e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Chat Link</label>
+                  <Input type="url" placeholder="https://..." value={relatedAnnouncementDraft.chat_link || ""} onChange={(e) => handleRelatedAnnouncementChange("chat_link", e.target.value)} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Meeting ID</label>

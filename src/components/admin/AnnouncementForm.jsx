@@ -20,6 +20,7 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
     location: '',
     virtual_platform: '',
     zoom_link: '',
+    chat_link: '',
     meeting_id: '',
     meeting_passcode: '',
     contact_email: '',
@@ -203,6 +204,10 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
             <div>
               <label htmlFor="zoom_link" className="block text-sm font-medium text-gray-700 mb-1">Link</label>
               <Input id="zoom_link" type="url" placeholder="https://..." value={formData.zoom_link} onChange={e => handleChange('zoom_link', e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="chat_link" className="block text-sm font-medium text-gray-700 mb-1">Chat Link</label>
+              <Input id="chat_link" type="url" placeholder="https://..." value={formData.chat_link || ''} onChange={e => handleChange('chat_link', e.target.value)} />
             </div>
             <div>
               <label htmlFor="meeting_id" className="block text-sm font-medium text-gray-700 mb-1">Meeting ID</label>
