@@ -207,6 +207,7 @@ export default function NewsletterAdmin({
   onDeleteBroadcast,
   onConfirm,
   onSuccess,
+  onError,
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -297,7 +298,9 @@ export default function NewsletterAdmin({
           });
           await onMarkBroadcastSent(broadcast.id, result, broadcast);
         } catch (error) {
-          setBroadcastStatus(`Scheduled broadcast "${broadcast.subject || "Untitled broadcast"}" was not sent: ${error.message}`);
+          const message = `Scheduled broadcast "${broadcast.subject || "Untitled broadcast"}" was not sent: ${error.message}`;
+          setBroadcastStatus(message);
+          onError?.(message);
         } finally {
           processingScheduledIds.current.delete(broadcast.id);
         }
@@ -346,11 +349,11 @@ export default function NewsletterAdmin({
     const existingSize = broadcastAttachments.reduce((sum, attachment) => sum + attachment.size, 0);
     const newSize = files.reduce((sum, file) => sum + file.size, 0);
     if (broadcastAttachments.length + files.length > 5) {
-      window.alert("Please attach no more than 5 files.");
+      onError?.("Please attach no more than 5 files.");
       return;
     }
     if (existingSize + newSize > 8 * 1024 * 1024) {
-      window.alert("Attachments must be 8 MB or less combined.");
+      onError?.("Attachments must be 8 MB or less combined.");
       return;
     }
 
@@ -431,7 +434,9 @@ export default function NewsletterAdmin({
       setBroadcastStatus(`Deleted "${subject}".`);
       onSuccess?.(`“${subject}” was deleted successfully.`);
     } catch (error) {
-      setBroadcastStatus(`Broadcast was not deleted: ${error.message}`);
+      const message = `Broadcast was not deleted: ${error.message}`;
+      setBroadcastStatus(message);
+      onError?.(message);
     } finally {
       setSavingBroadcast(false);
     }
@@ -475,7 +480,9 @@ export default function NewsletterAdmin({
       setBroadcastStatus("Draft saved.");
       onSuccess?.("The newsletter draft was saved successfully.");
     } catch (error) {
-      setBroadcastStatus(`Draft was not saved: ${error.message}`);
+      const message = `Draft was not saved: ${error.message}`;
+      setBroadcastStatus(message);
+      onError?.(message);
     } finally {
       setSavingBroadcast(false);
     }
@@ -497,7 +504,9 @@ export default function NewsletterAdmin({
       setBroadcastStatus("Broadcast scheduled.");
       onSuccess?.("The newsletter broadcast was scheduled successfully.");
     } catch (error) {
-      setBroadcastStatus(`Broadcast was not scheduled: ${error.message}`);
+      const message = `Broadcast was not scheduled: ${error.message}`;
+      setBroadcastStatus(message);
+      onError?.(message);
     } finally {
       setSavingBroadcast(false);
     }
@@ -538,7 +547,9 @@ export default function NewsletterAdmin({
         resetBroadcastComposer();
       }
     } catch (error) {
-      setBroadcastStatus(`Broadcast was not sent: ${error.message}`);
+      const errorMessage = `Broadcast was not sent: ${error.message}`;
+      setBroadcastStatus(errorMessage);
+      onError?.(errorMessage);
     } finally {
       setSendingBroadcast(false);
     }

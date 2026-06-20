@@ -37,7 +37,7 @@ import { firestore } from '@/lib/firebase';
 import { DEFAULT_HOMEPAGE_BANNERS, LIVE_BIBLE_STUDY_BANNER_MESSAGE } from '@/lib/homepageBanners';
 import { DEFAULT_EMAIL_TEMPLATES, NEWSLETTER_TEMPLATE_IDS } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
-import { Camera, CheckCircle2, Loader2, ShieldAlert, CalendarHeart, PlaySquare, FileText, MessageSquare, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2, Search, Grid2X2, List, Plus, Info, ChevronDown, EyeOff, RotateCcw, Trash2 } from 'lucide-react';
+import { Camera, CheckCircle2, XCircle, Loader2, ShieldAlert, CalendarHeart, PlaySquare, FileText, MessageSquare, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2, Search, Grid2X2, List, Plus, Info, ChevronDown, EyeOff, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -436,6 +436,21 @@ export default function AdminPage() {
       ),
       description: message,
       className: 'border-emerald-200 bg-emerald-50 text-emerald-950 shadow-xl',
+    });
+    window.setTimeout(notification.dismiss, 4000);
+  };
+
+  const showError = (message) => {
+    const notification = toast({
+      title: (
+        <span className="flex items-center gap-2 text-red-950">
+          <XCircle className="h-5 w-5 text-red-600" />
+          Action failed
+        </span>
+      ),
+      description: message,
+      variant: 'destructive',
+      className: 'border-red-700 bg-red-600 text-white shadow-xl',
     });
     window.setTimeout(notification.dismiss, 4000);
   };
@@ -1031,17 +1046,18 @@ export default function AdminPage() {
         },
       });
       await loadNewsletterAdmin();
-      showSuccess('The newsletter subscriber was removed successfully.');
       if (welcomeEmailError) {
-        window.alert(`Subscriber added, but ${welcomeEmailError}`);
+        showError(`Subscriber added, but ${welcomeEmailError}`);
+      } else {
+        showSuccess('The newsletter subscriber was added successfully.');
       }
     } catch (error) {
       console.error('Unable to add newsletter subscriber:', error);
       if (error?.message === 'already-subscribed' || error?.status === 409) {
-        window.alert('That email address is already subscribed.');
+        showError('That email address is already subscribed.');
         return;
       }
-      window.alert(getSaveErrorMessage(error));
+      showError(getSaveErrorMessage(error));
     }
   };
 
@@ -1062,9 +1078,10 @@ export default function AdminPage() {
         itemId: id,
       });
       await loadNewsletterAdmin();
+      showSuccess('The newsletter subscriber was removed successfully.');
     } catch (error) {
       console.error('Unable to delete newsletter subscriber:', error);
-      window.alert(getSaveErrorMessage(error));
+      showError(getSaveErrorMessage(error));
     }
   };
 
@@ -1091,7 +1108,7 @@ export default function AdminPage() {
       await loadNewsletterAdmin();
     } catch (error) {
       console.error('Unable to save email template:', error);
-      window.alert(getSaveErrorMessage(error));
+      showError(getSaveErrorMessage(error));
     }
   };
 
@@ -1125,11 +1142,11 @@ export default function AdminPage() {
 
       if (!response.ok) {
         const errorMessage = await getApiErrorMessage(response, 'Unable to send the test email.');
-        window.alert(errorMessage);
+        showError(errorMessage);
         return;
       }
 
-      window.alert('Test email sent.');
+      showSuccess('The test email was sent successfully.');
       await logAdminActivity({
         action: 'sent_test_email',
         section: 'Newsletter',
@@ -1138,7 +1155,7 @@ export default function AdminPage() {
         itemLabel: normalizedEmail,
       });
     } catch (error) {
-      window.alert(`Unable to send the test email: ${error.message}`);
+      showError(`Unable to send the test email: ${error.message}`);
     }
   };
 
@@ -1408,7 +1425,7 @@ export default function AdminPage() {
         : `The ${entityInfo.name} was deleted successfully.`);
     } catch (error) {
       console.error(`Unable to delete ${entityInfo.name}:`, error);
-      window.alert(`Unable to delete this ${entityInfo.name}. Please try again.`);
+      showError(`Unable to delete this ${entityInfo.name}. Please try again.`);
     }
   };
 
@@ -1438,7 +1455,7 @@ export default function AdminPage() {
     const failedDeletes = results.filter((result) => result.status === 'rejected');
     if (failedDeletes.length > 0) {
       console.error('Unable to delete some selected hero slides:', failedDeletes);
-      window.alert(`${failedDeletes.length} selected ${failedDeletes.length === 1 ? 'hero slide was' : 'hero slides were'} not deleted. Please try again.`);
+      showError(`${failedDeletes.length} selected ${failedDeletes.length === 1 ? 'hero slide was' : 'hero slides were'} not deleted. Please try again.`);
       return false;
     }
 
@@ -1528,7 +1545,7 @@ export default function AdminPage() {
       if (failedAnnouncementUpdates.length > 0) {
         messages.push(`${failedAnnouncementUpdates.length} linked ${failedAnnouncementUpdates.length === 1 ? 'announcement was' : 'announcements were'} not hidden`);
       }
-      window.alert(`${messages.join(' and ')}. Please try again.`);
+      showError(`${messages.join(' and ')}. Please try again.`);
       return false;
     }
 
@@ -1591,7 +1608,7 @@ export default function AdminPage() {
       return true;
     } catch (error) {
       console.error('Unable to update announcement visibility:', error);
-      window.alert('Unable to update this announcement or event. Please try again.');
+      showError('Unable to update this announcement or event. Please try again.');
       return false;
     }
   };
@@ -1627,7 +1644,7 @@ export default function AdminPage() {
       await loadHeroSlides();
     } catch (error) {
       console.error('Unable to reorder hero slides:', error);
-      window.alert('Unable to save the new hero slide order. Please try again.');
+      showError('Unable to save the new hero slide order. Please try again.');
       await loadHeroSlides();
     }
   };
@@ -1965,7 +1982,7 @@ export default function AdminPage() {
 
     } catch (error) {
         console.error("Error in handleFormSubmit:", error);
-        window.alert(getSaveErrorMessage(error));
+        showError(getSaveErrorMessage(error));
         return false;
     }
   };
@@ -1980,7 +1997,7 @@ export default function AdminPage() {
 
   const handleSavePendingHeroDraft = async () => {
     if (!heroFormUnsavedDraft.draft) {
-      window.alert('There is nothing draftable to save yet. Add a hero image or announcement details before saving a draft.');
+      showError('There is nothing draftable to save yet. Add a hero image or announcement details before saving a draft.');
       return;
     }
 
@@ -1988,7 +2005,7 @@ export default function AdminPage() {
     try {
       const saved = await handleFormSubmit(heroFormUnsavedDraft.draft, { asDraft: true });
       if (saved) {
-        window.alert('Draft saved. It is now in the Inactive Slides & Announcements section and will not show publicly.');
+        showSuccess('Draft saved. It is now in the Inactive Slides & Announcements section and will not show publicly.');
         completePendingAdminTransition();
       }
     } finally {
@@ -2204,7 +2221,7 @@ export default function AdminPage() {
       });
     } catch (error) {
       console.error('Unable to save admin name:', error);
-      window.alert(getSaveErrorMessage(error));
+      showError(getSaveErrorMessage(error));
     } finally {
       setSavingAdminName(false);
     }
@@ -2215,7 +2232,7 @@ export default function AdminPage() {
     event.target.value = '';
     if (!file || !currentAdmin?.id) return;
     if (!file.type.startsWith('image/')) {
-      window.alert('Please choose an image file.');
+      showError('Please choose an image file.');
       return;
     }
 
@@ -2251,7 +2268,7 @@ export default function AdminPage() {
       });
     } catch (error) {
       console.error('Unable to upload admin profile photo:', error);
-      window.alert(getSaveErrorMessage(error));
+      showError(getSaveErrorMessage(error));
     } finally {
       setUploadingAdminPhoto(false);
     }
@@ -2811,6 +2828,7 @@ export default function AdminPage() {
           onDeleteBroadcast={handleDeleteNewsletterBroadcast}
           onConfirm={requestConfirmation}
           onSuccess={showSuccess}
+          onError={showError}
         />;
       case 'developer':
         return canViewDeveloperPanel
@@ -2829,6 +2847,7 @@ export default function AdminPage() {
               currentAdminEmail={currentAdmin?.email || ''}
               onConfirm={requestConfirmation}
               onSuccess={showSuccess}
+              onError={showError}
             />
           : null;
       default:

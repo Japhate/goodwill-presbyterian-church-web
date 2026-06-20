@@ -48,6 +48,7 @@ export default function DeveloperPanel({
   currentAdminEmail = "",
   onConfirm,
   onSuccess,
+  onError,
 }) {
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState({});
@@ -86,10 +87,13 @@ export default function DeveloperPanel({
         email: normalizedEmail,
       });
       setInviteStatus(`Site Admin invitation sent to ${normalizedEmail}.`);
+      onSuccess?.(`A site administrator invitation was sent to ${normalizedEmail}.`);
       setEmail("");
       setErrors({});
     } catch (error) {
-      setInviteStatus(error.message || "Unable to send the admin invitation.");
+      const message = error.message || "Unable to send the admin invitation.";
+      setInviteStatus(message);
+      onError?.(message);
     } finally {
       setSendingInvite(false);
     }
@@ -111,7 +115,9 @@ export default function DeveloperPanel({
       setAdminStatus(`${adminEmail} is now ${roleLabel}.`);
       onSuccess?.(`${adminEmail} is now ${roleLabel}.`);
     } catch (error) {
-      setAdminStatus(error.message || "Unable to update the administrator role.");
+      const message = error.message || "Unable to update the administrator role.";
+      setAdminStatus(message);
+      onError?.(message);
     } finally {
       setUpdatingAdminUid("");
     }
@@ -133,7 +139,9 @@ export default function DeveloperPanel({
       setAdminStatus(`${adminEmail} was removed from the Firestore site administrators list.`);
       onSuccess?.(`${adminEmail} was removed from the site administrators list.`);
     } catch (error) {
-      setAdminStatus(error.message || "Unable to delete the site administrator.");
+      const message = error.message || "Unable to delete the site administrator.";
+      setAdminStatus(message);
+      onError?.(message);
     } finally {
       setDeletingAdminUid("");
     }
