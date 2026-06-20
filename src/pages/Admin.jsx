@@ -2256,6 +2256,15 @@ export default function AdminPage() {
     return new Date(b.created_date) - new Date(a.created_date);
   });
   const inactiveAnnouncements = [...allHidden, ...pastAnnouncements];
+  const linkedAnnouncementIds = new Set(
+    heroSlides
+      .map((slide) => slide.announcement_id)
+      .filter(Boolean)
+      .map(String)
+  );
+  const standaloneInactiveAnnouncements = inactiveAnnouncements.filter((announcement) =>
+    !linkedAnnouncementIds.has(String(announcement.id))
+  );
 
   const otherAdminProfiles = adminProfiles.filter((profile) => profile.id !== currentAdmin?.id);
   const nextHeroSlideOrder = heroSlides
@@ -2264,7 +2273,7 @@ export default function AdminPage() {
   const activeHeroSlideCount = heroSlides.filter((slide) => slide.is_active !== false).length;
   const inactiveHeroSlideCount = heroSlides.filter((slide) => slide.is_active === false).length;
   const activeHeroAnnouncementItemCount = activeHeroSlideCount;
-  const inactiveHeroAnnouncementItemCount = inactiveHeroSlideCount + inactiveAnnouncements.length;
+  const inactiveHeroAnnouncementItemCount = inactiveHeroSlideCount + standaloneInactiveAnnouncements.length;
   const filterHeroSlidesByAdminSearch = (slidesToFilter, isActive, searchTerm) => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
     return slidesToFilter.filter((slide) => {
@@ -2681,7 +2690,7 @@ export default function AdminPage() {
                 hideSelectAll
               />
               <AnnouncementList
-                announcements={inactiveAnnouncements}
+                announcements={standaloneInactiveAnnouncements}
                 onEdit={(item) => handleEdit(item, 'announcement')}
                 onDelete={(id) => handleDelete(id, 'announcement')}
                 onRestore={(id) => handleSetAnnouncementVisibility(id, 'Active')}
