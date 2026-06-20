@@ -46,6 +46,7 @@ export default function DeveloperPanel({
   onUpdateAdminRole,
   canManageAdmins = false,
   currentAdminEmail = "",
+  onConfirm,
 }) {
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState({});
@@ -96,7 +97,11 @@ export default function DeveloperPanel({
   const handleUpdateRole = async (admin, role) => {
     const adminEmail = admin.email || "this administrator";
     const roleLabel = role === "site_developer" ? "Site Developer" : "Site Admin";
-    if (!window.confirm(`Change ${adminEmail} to ${roleLabel}? This does not send an email.`)) return;
+    if (!await onConfirm?.({
+      title: `Change role to ${roleLabel}?`,
+      description: `${adminEmail} will receive ${roleLabel} permissions. This does not send an email.`,
+      confirmLabel: "Change role",
+    })) return;
 
     setUpdatingAdminUid(admin.uid);
     setAdminStatus("");
@@ -112,7 +117,12 @@ export default function DeveloperPanel({
 
   const handleDeleteAdmin = async (admin) => {
     const adminEmail = admin.email || "this administrator";
-    if (!window.confirm(`Remove ${adminEmail} from the site administrators list? This deletes their Firestore admin record and revokes admin panel access. Their past activity logs will remain.`)) return;
+    if (!await onConfirm?.({
+      title: "Remove site administrator?",
+      description: `${adminEmail} will lose admin-panel access and their Firestore admin record will be deleted. Past activity logs will remain.`,
+      confirmLabel: "Remove administrator",
+      tone: "danger",
+    })) return;
 
     setDeletingAdminUid(admin.uid);
     setAdminStatus("");

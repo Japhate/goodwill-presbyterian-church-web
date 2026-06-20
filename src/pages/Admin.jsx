@@ -376,6 +376,7 @@ export default function AdminPage() {
   const [adminProfiles, setAdminProfiles] = useState([]);
   const [heroFormUnsavedDraft, setHeroFormUnsavedDraft] = useState({ isDirty: false, draft: null });
   const [pendingAdminTransition, setPendingAdminTransition] = useState(null);
+  const [confirmationDialog, setConfirmationDialog] = useState(null);
   const [savingHeroDraft, setSavingHeroDraft] = useState(false);
   const [showPrivacyNotice, setShowPrivacyNotice] = useState(false);
   const [privacyNoticeRead, setPrivacyNoticeRead] = useState(false);
@@ -388,6 +389,7 @@ export default function AdminPage() {
   const privacyNoticeRef = useRef(null);
   const adminInstructionRef = useRef(null);
   const adminContentTopRef = useRef(null);
+  const confirmationResolverRef = useRef(null);
   const canViewDeveloperPanel = isSiteDeveloperAdmin(currentAdmin);
   const canManageSiteAdmins = isRootSiteDeveloper(currentAdmin);
   const adminRoleLabel = canManageSiteAdmins ? 'Site Developer' : 'Site Admin';
@@ -406,6 +408,21 @@ export default function AdminPage() {
   const SelectedAdminSectionIcon = selectedAdminSection?.icon || LayoutTemplate;
   const selectedAdminInstructions = selectedAdminSection?.instructions || '';
   const canExpandAdminInstructions = adminInstructionOverflows;
+
+  const requestConfirmation = ({ title = 'Please confirm', description, confirmLabel = 'Confirm', tone = 'default' }) => (
+    new Promise((resolve) => {
+      confirmationResolverRef.current?.(false);
+      confirmationResolverRef.current = resolve;
+      setConfirmationDialog({ title, description, confirmLabel, tone });
+    })
+  );
+
+  const resolveConfirmation = (confirmed) => {
+    const resolve = confirmationResolverRef.current;
+    confirmationResolverRef.current = null;
+    setConfirmationDialog(null);
+    resolve?.(confirmed);
+  };
 
   const requestAdminTransition = (transition) => {
     if (hasUnsavedHeroAnnouncementChanges) {
@@ -1012,7 +1029,12 @@ export default function AdminPage() {
   };
 
   const handleDeleteNewsletterSubscriber = async (id) => {
-    if (!window.confirm('Remove this email address from the newsletter list?')) return;
+    if (!await requestConfirmation({
+      title: 'Remove subscriber?',
+      description: 'This email address will be removed from the newsletter list.',
+      confirmLabel: 'Remove subscriber',
+      tone: 'danger',
+    })) return;
 
     try {
       await NewsletterSubscriptions.delete(id);
@@ -1347,20 +1369,26 @@ export default function AdminPage() {
     const entityInfo = entityMap[type];
     if (!entityInfo) return;
 
-    if (window.confirm(`Are you sure you want to delete this ${entityInfo.name}?`)) {
-      try {
-        await entityInfo.entity.delete(id);
-        await logAdminActivity({
-          action: 'deleted',
-          section: FORM_LOG_META[type]?.section || 'Admin Content',
-          itemType: entityInfo.name,
-          itemId: id,
-        });
-        await refreshDataForType(type);
-      } catch (error) {
-        console.error(`Unable to delete ${entityInfo.name}:`, error);
-        window.alert(`Unable to delete this ${entityInfo.name}. Please try again.`);
-      }
+    const confirmed = await requestConfirmation({
+      title: `Delete this ${entityInfo.name}?`,
+      description: 'This action cannot be undone.',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
+    try {
+      await entityInfo.entity.delete(id);
+      await logAdminActivity({
+        action: 'deleted',
+        section: FORM_LOG_META[type]?.section || 'Admin Content',
+        itemType: entityInfo.name,
+        itemId: id,
+      });
+      await refreshDataForType(type);
+    } catch (error) {
+      console.error(`Unable to delete ${entityInfo.name}:`, error);
+      window.alert(`Unable to delete this ${entityInfo.name}. Please try again.`);
     }
   };
 
@@ -1368,7 +1396,12 @@ export default function AdminPage() {
     if (!ids.length) return false;
 
     const slideLabel = ids.length === 1 ? 'hero slide' : 'hero slides';
-    if (!window.confirm(`Are you sure you want to delete ${ids.length} selected ${slideLabel}?`)) {
+    if (!await requestConfirmation({
+      title: `Delete ${ids.length} selected ${slideLabel}?`,
+      description: 'Linked announcements and managed images that are no longer used will also be deleted. This action cannot be undone.',
+      confirmLabel: ids.length === 1 ? 'Delete slide' : 'Delete slides',
+      tone: 'danger',
+    })) {
       return false;
     }
 
@@ -1408,7 +1441,12 @@ export default function AdminPage() {
       ? `Restore ${ids.length} selected ${slideLabel} to the homepage slideshow?`
       : `Hide ${ids.length} selected ${slideLabel} from the homepage slideshow? The images will stay saved for reuse.`;
 
-    if (!window.confirm(confirmMessage)) {
+    if (!await requestConfirmation({
+      title: isActive ? `Restore ${ids.length} ${slideLabel}?` : `Hide ${ids.length} ${slideLabel}?`,
+      description: confirmMessage,
+      confirmLabel: isActive ? 'Restore' : 'Hide',
+      tone: isActive ? 'default' : 'warning',
+    })) {
       return false;
     }
 
@@ -1492,7 +1530,12 @@ export default function AdminPage() {
       ? 'Restore this announcement or event so it appears on the Updates page?'
       : 'Move this announcement or event to the hidden section? It will stay saved for reuse.';
 
-    if (!window.confirm(confirmMessage)) {
+    if (!await requestConfirmation({
+      title: isRestoring ? 'Restore announcement?' : 'Hide announcement?',
+      description: confirmMessage,
+      confirmLabel: isRestoring ? 'Restore' : 'Hide',
+      tone: isRestoring ? 'default' : 'warning',
+    })) {
       return false;
     }
 
@@ -1575,7 +1618,11 @@ export default function AdminPage() {
     const entityInfo = entityMap[type];
     if (!entityInfo) return;
 
-    if (window.confirm(`Are you sure you want to duplicate this ${entityInfo.name}?`)) {
+    if (await requestConfirmation({
+      title: `Duplicate this ${entityInfo.name}?`,
+      description: 'A separate copy will be created for you to edit.',
+      confirmLabel: 'Duplicate',
+    })) {
         const { id: _id, created_date: _createdDate, updated_date: _updatedDate, created_by: _createdBy, ...duplicatableData } = item;
         const duplicatedItem = {
             ...duplicatableData,
@@ -2731,6 +2778,7 @@ export default function AdminPage() {
           onScheduleBroadcast={handleScheduleNewsletterBroadcast}
           onMarkBroadcastSent={handleMarkNewsletterBroadcastSent}
           onDeleteBroadcast={handleDeleteNewsletterBroadcast}
+          onConfirm={requestConfirmation}
         />;
       case 'developer':
         return canViewDeveloperPanel
@@ -2747,6 +2795,7 @@ export default function AdminPage() {
               onUpdateAdminRole={handleUpdateSiteAdminRole}
               canManageAdmins={canManageSiteAdmins}
               currentAdminEmail={currentAdmin?.email || ''}
+              onConfirm={requestConfirmation}
             />
           : null;
       default:
@@ -2756,6 +2805,31 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 pt-1 pb-4">
+      {confirmationDialog && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/65 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="admin-confirm-title">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl">
+            <div className="flex items-start gap-4 p-6">
+              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${confirmationDialog.tone === 'danger' ? 'bg-red-100 text-red-700' : confirmationDialog.tone === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                <ShieldAlert className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h2 id="admin-confirm-title" className="text-xl font-bold text-slate-950">{confirmationDialog.title}</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{confirmationDialog.description}</p>
+              </div>
+            </div>
+            <div className="flex flex-col-reverse gap-2 border-t bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={() => resolveConfirmation(false)}>Cancel</Button>
+              <Button
+                type="button"
+                onClick={() => resolveConfirmation(true)}
+                className={confirmationDialog.tone === 'danger' ? 'bg-red-600 hover:bg-red-700' : confirmationDialog.tone === 'warning' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-700 hover:bg-emerald-800'}
+              >
+                {confirmationDialog.confirmLabel}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {pendingAdminTransition && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4 py-6" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl">

@@ -205,6 +205,7 @@ export default function NewsletterAdmin({
   onScheduleBroadcast,
   onMarkBroadcastSent,
   onDeleteBroadcast,
+  onConfirm,
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -412,7 +413,12 @@ export default function NewsletterAdmin({
   const handleDeleteBroadcast = async (broadcast) => {
     if (!broadcast?.id || !onDeleteBroadcast) return;
     const subject = broadcast.subject || "Untitled broadcast";
-    if (!window.confirm(`Delete "${subject}" from broadcast drafts and history? This cannot be undone.`)) return;
+    if (!await onConfirm?.({
+      title: "Delete newsletter broadcast?",
+      description: `“${subject}” will be removed from drafts and broadcast history. This cannot be undone.`,
+      confirmLabel: "Delete broadcast",
+      tone: "danger",
+    })) return;
 
     setSavingBroadcast(true);
     setBroadcastStatus("");
@@ -499,7 +505,11 @@ export default function NewsletterAdmin({
     const message = broadcastMessage.trim();
     if (!validateBroadcast()) return;
 
-    if (!window.confirm(`Send this broadcast to ${selectedRecipientCount} selected subscriber${selectedRecipientCount === 1 ? "" : "s"}?`)) return;
+    if (!await onConfirm?.({
+      title: "Send newsletter broadcast?",
+      description: `This message will be sent to ${selectedRecipientCount} selected subscriber${selectedRecipientCount === 1 ? "" : "s"}.`,
+      confirmLabel: "Send broadcast",
+    })) return;
 
     setSendingBroadcast(true);
     setBroadcastStatus("");
