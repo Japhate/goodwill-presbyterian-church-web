@@ -666,9 +666,9 @@ export default function Updates() {
                       selectedAnnouncementId === String(item.id) ? "ring-4 ring-amber-400 ring-offset-4" : ""
                     }`}
                   >
-                    {item.image_upload ? (
+                    {(item.image_upload || item.image_url) ? (
                       <div className="flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden bg-white p-2 md:w-[32%] md:self-start xl:w-[30%]">
-                        <img src={item.image_upload} alt={item.title} className="h-full w-full object-contain object-left" />
+                        <img src={item.image_upload || item.image_url} alt={item.title} className="h-full w-full object-contain object-left" />
                       </div>
                     ) : null}
                     <div className="flex min-h-0 flex-grow flex-col p-4 md:max-h-[calc((100vw-1.5rem)*0.32*9/16)] md:overflow-hidden md:py-2 md:pl-2 md:pr-4 lg:max-h-[calc((100vw-2rem)*0.32*9/16)] xl:max-h-[calc((100vw-2rem)*0.30*9/16)] xl:py-2 xl:pl-2 xl:pr-5">
@@ -939,9 +939,9 @@ export default function Updates() {
                     }`}
                   >
                     <div className="flex flex-col gap-5">
-                      {item.image_upload && (
+                      {(item.image_upload || item.image_url) && (
                         <div className="flex aspect-[32/15] w-full items-center justify-center overflow-hidden rounded-lg bg-gray-950">
-                          <img src={item.image_upload} alt={item.title} className="h-full w-full object-contain" />
+                          <img src={item.image_upload || item.image_url} alt={item.title} className="h-full w-full object-contain" />
                         </div>
                       )}
                       <div className="flex-1">
