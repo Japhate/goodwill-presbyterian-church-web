@@ -43,6 +43,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 
 const ADMIN_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+const ADMIN_TOAST_DISMISS_MS = 3500;
 const AUTO_LOGOUT_NOTICE_KEY = 'goodwill-admin-auto-logout';
 const AUTO_LOGOUT_MESSAGE = 'You were logged out automatically due to inactivity.';
 const ADMIN_VIEW_STORAGE_KEY = 'goodwill-admin-current-view';
@@ -432,7 +433,7 @@ export default function AdminPage() {
       description: message,
       className: 'border-emerald-200 bg-emerald-50 text-emerald-950 shadow-xl',
     });
-    window.setTimeout(notification.dismiss, 4000);
+    window.setTimeout(notification.dismiss, ADMIN_TOAST_DISMISS_MS);
   };
 
   const showError = (message) => {
@@ -447,7 +448,7 @@ export default function AdminPage() {
       variant: 'destructive',
       className: 'border-red-700 bg-red-600 text-white shadow-xl',
     });
-    window.setTimeout(notification.dismiss, 4000);
+    window.setTimeout(notification.dismiss, ADMIN_TOAST_DISMISS_MS);
   };
 
   const requestAdminTransition = (transition) => {
