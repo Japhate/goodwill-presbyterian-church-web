@@ -6,7 +6,8 @@ React and Vite frontend with Firebase-backed content management, deployed on Ren
 
 Run `npm run dev`, then open `http://localhost:3100`.
 
-The local Node server and Vite live-update preview share port `3100`, including local API requests.
+The local Node server and Vite dev middleware share port `3100`, including local API requests.
+The dev server binds to `localhost` by default. In Codespaces, that means the app runs on the Codespace machine; open it through the forwarded port URL, or use `http://localhost:3100` only when your editor has forwarded port `3100` to your computer.
 
 ## Firebase Content Management
 

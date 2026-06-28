@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
-
-process.env.LOCAL_VITE_DEV = 'true';
-process.env.PORT = process.env.PORT || '3100';
+import { pathToFileURL } from 'node:url';
+import path from 'node:path';
 
 if (!globalThis.crypto?.getRandomValues && crypto.webcrypto) {
   globalThis.crypto = crypto.webcrypto;
@@ -11,4 +10,4 @@ if (!crypto.getRandomValues && crypto.webcrypto?.getRandomValues) {
   crypto.getRandomValues = crypto.webcrypto.getRandomValues.bind(crypto.webcrypto);
 }
 
-await import('../server/index.js');
+await import(pathToFileURL(path.resolve('node_modules/vite/bin/vite.js')).href);

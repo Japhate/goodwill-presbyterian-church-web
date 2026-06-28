@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPageUrl } from "@/utils";
-import { ArrowRight, Clock, MapPin, BookOpen, ChevronDown, Youtube as YoutubeIcon, Send, Video, Play, Pause, Map, Navigation, UserRound } from "lucide-react";
+import { ArrowRight, Clock, MapPin, BookOpen, ChevronDown, Youtube as YoutubeIcon, Send, Video, Play, Pause, Map, Navigation, UserRound, ExternalLink } from "lucide-react";
 import HeroSlideshow from "@/components/home/HeroSlideshow";
 import { Button } from "@/components/ui/button";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
@@ -1193,9 +1193,20 @@ export default function Home() {
                     </p>
                 )}
                 <div className="flex flex-col gap-2 sm:flex-row md:gap-3">
+                    {latestSermon.youtube_url && (
+                      <a
+                          href={latestSermon.youtube_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center rounded-md bg-red-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-800 md:px-5 md:py-3"
+                      >
+                          <ExternalLink className="mr-2 h-5 w-5" />
+                          Open Sermon
+                      </a>
+                    )}
                     <a 
                         href={createPageUrl("Resources") + "#more-sermons"}
-                        className="inline-flex items-center justify-center rounded-md bg-red-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-800 md:px-5 md:py-3"
+                        className="inline-flex items-center justify-center rounded-md border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 shadow-sm transition-colors hover:bg-red-50 md:px-5 md:py-3"
                     >
                         <YoutubeIcon className="mr-2 h-5 w-5" />
                         Watch More Sermons

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlayCircle, BookOpen, Calendar, User, FileText, Youtube, Download, Radio, Clock, PlaySquare, X, MapPin, LayoutGrid, List, Search } from "lucide-react";
+import { PlayCircle, BookOpen, Calendar, User, FileText, Youtube, Download, Radio, Clock, PlaySquare, X, MapPin, LayoutGrid, List, Search, ExternalLink } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { getActiveSpecialServiceNotice, getSpecialServiceDateTime } from "@/lib/specialServiceNotice";
@@ -858,18 +858,29 @@ export default function Resources() {
                 </CardHeader>
                 <CardContent>
                     {embedUrl ? (
-                      <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                        <iframe
-                          width="100%"
-                          height="100%"
-                          src={embedUrl}
-                          title="YouTube video player"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          allowFullScreen
-                          referrerPolicy="strict-origin-when-cross-origin"
-                        ></iframe>
-                      </div>
+                      <>
+                        <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                          <iframe
+                            width="100%"
+                            height="100%"
+                            src={embedUrl}
+                            title="YouTube video player"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                            referrerPolicy="strict-origin-when-cross-origin"
+                          ></iframe>
+                        </div>
+                        <a
+                          href={latestSermon.youtube_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex items-center justify-center rounded-md bg-red-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-800"
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Open on YouTube
+                        </a>
+                      </>
                     ) : playingSermonId ? (
                       <div className="aspect-video bg-gray-200 flex items-center justify-center rounded-lg">
                         <div className="text-center">
@@ -1043,7 +1054,13 @@ export default function Resources() {
                             <span className="font-semibold">Date:</span> {format(parseISO(sermon.date), "MMMM d, yyyy")}
                           </p>
                         )}
-                        {isPlaying && <div className="mt-3"><Button onClick={() => setPlayingSermonId(null)} variant="outline" size="sm" className="w-full text-xs">Close Video</Button></div>}
+                        <div className="mt-3 grid gap-2">
+                          <a href={sermon.youtube_url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50">
+                            <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                            Open on YouTube
+                          </a>
+                          {isPlaying && <Button onClick={() => setPlayingSermonId(null)} variant="outline" size="sm" className="w-full text-xs">Close Video</Button>}
+                        </div>
                       </CardContent>
                     </Card>
                   );
@@ -1083,6 +1100,10 @@ export default function Resources() {
                             </p>
                           </div>
                           {selectedSermon?.id === sermon.id && <Badge className="bg-amber-500 text-white flex-shrink-0">Now Playing</Badge>}
+                          <a href={sermon.youtube_url} target="_blank" rel="noreferrer" className="inline-flex flex-shrink-0 items-center justify-center rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50">
+                            <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                            YouTube
+                          </a>
                         </div>
                       )}
                       {isPlaying && <div className="p-3 pt-0"><Button onClick={() => setPlayingSermonId(null)} variant="outline" size="sm" className="w-full text-xs">Close Video</Button></div>}

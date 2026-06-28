@@ -1321,13 +1321,28 @@ app.post('/api/send-newsletter-broadcast', async (req, res) => {
   res.json({ success: failed === 0, sent, failed, results, adminNotifications: adminNotificationResults });
 });
 
+const port = Number(process.env.PORT || 3100);
+const host = process.env.HOST || 'localhost';
 const useLocalViteServer = process.env.LOCAL_VITE_DEV === 'true';
 
 if (useLocalViteServer) {
+  if (!globalThis.crypto?.getRandomValues && crypto.webcrypto) {
+    globalThis.crypto = crypto.webcrypto;
+  }
+
+  if (!crypto.getRandomValues && crypto.webcrypto?.getRandomValues) {
+    crypto.getRandomValues = crypto.webcrypto.getRandomValues.bind(crypto.webcrypto);
+  }
+
   const { createServer: createViteServer } = await import('vite');
   const vite = await createViteServer({
     appType: 'custom',
-    server: { middlewareMode: true },
+    server: {
+      host: 'localhost',
+      hmr: false,
+      ws: false,
+      middlewareMode: true,
+    },
   });
 
   app.use(vite.middlewares);
@@ -1357,5 +1372,4 @@ if (useLocalViteServer) {
   });
 }
 
-const port = process.env.PORT || 3100;
-app.listen(port, () => console.log(`Node site listening on port ${port}`));
+app.listen(port, host, () => console.log(`Node site listening at http://${host}:${port}`));
